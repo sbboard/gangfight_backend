@@ -7,7 +7,7 @@ const GangContent = new Schema({
     subtitle: {type: String},
     img: {type: String, required: true},
     url: {type: String, required: true},
-    category: {type: String, required: true},
+    category: {type: String},
     date: {type: Date, required: true},
     series: {type: String}
 })

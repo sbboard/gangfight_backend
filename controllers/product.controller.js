@@ -38,17 +38,20 @@ exports.cat_list = (req, res, next) => {
 
 exports.product_create = (req, res, next) => {
     let product = new Product({
-        name: req.body.name,
-        age: req.body.age,
-        cat: req.body.cat,
-        shoe: req.body.shoe
+        title: req.body.title,
+        subtitle: req.body.subtitle,
+        img: req.body.img,
+        url: req.body.url,
+        category: req.body.category,
+        date: req.body.date,
+        series: req.body.series
     })
 
     product.save((err) => {
         if (err){
             return next(err)
         }
-        res.send('Person created!')
+        res.send('Content Posted')
     })
 }
 

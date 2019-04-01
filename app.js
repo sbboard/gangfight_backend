@@ -1,8 +1,9 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const mongoose = require('mongoose')
-const dev_db_url = require('./secret.js')
+const dbpass = require('./secret.js')
 
+const dev_db_url = `mongodb+srv://buffum:${dbpass}@gangu-t2mbg.mongodb.net/test`
 const mongoDB = process.env.MONGODB_URI || dev_db_url
 mongoose.connect(mongoDB, {useNewUrlParser: true})
 mongoose.Promise = global.Promise
