@@ -1,4 +1,4 @@
-const Product = require('../models/product.model')
+const Product = require('../models/content.model')
 
 exports.person_info = (req, res, next) => {
     Product.findById(req.params.id, (err, personInfo) => {
