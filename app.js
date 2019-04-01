@@ -15,7 +15,7 @@ const app = express()
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({extended: false}))
 
-const product = require('./routes/product.route')
+const product = require('./routes/content.route')
 
 app.use('/api', product)
 

@@ -11,16 +11,16 @@
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js"
+    "start": "node app.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sbboard/CRUDproj.git"
+    "url": "git+https://github.com/sbboard/gangfight_backend.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/sbboard/CRUDproj/issues"
+    "url": "https://github.com/sbboard/gangfight_backend/issues"
   },
-  "homepage": "https://github.com/sbboard/CRUDproj#readme"
+  "homepage": "https://github.com/sbboard/gangfight_backend#readme"
 }
