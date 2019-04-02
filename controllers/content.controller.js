@@ -1,10 +1,12 @@
 const Product = require('../models/content.model')
 
 exports.product_create = (req, res, next) => {
+    let name = req.files.img.name;
+    req.files.img.mv('/assets/contentImages/'+name)
     let product = new Product({
         title: req.body.title,
         subtitle: req.body.subtitle,
-        img: req.body.img,
+        img: name,
         url: req.body.url,
         category: req.body.category,
         date: Date(),
