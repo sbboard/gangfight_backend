@@ -55,7 +55,7 @@ exports.comic_list = (req, res, next) => {
         let list = []
         personList.forEach((user)=> {
             if(user.category == "comic"){
-                list.push([user.title, user.id])
+                list.push([user.title, user.id,user.img,user.date])
             }
         })
         res.send(list)
@@ -68,7 +68,7 @@ exports.proj_list = (req, res, next) => {
         let list = []
         personList.forEach((user)=> {
             if(user.category == "project"){
-                list.push([user.title, user.id])
+                list.push([user.title, user.id,user.img,user.date])
             }
         })
         res.send(list)
