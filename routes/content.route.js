@@ -13,8 +13,6 @@ router.get('/projects', product_controller.proj_list)
 
 router.get('/comics', product_controller.comic_list)
 
-//router.get('/:id', product_controller.person_info)
-
 router.get('/:num?', product_controller.whole_list)
 
 module.exports = router

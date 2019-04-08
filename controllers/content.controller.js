@@ -21,13 +21,6 @@ exports.product_create = (req, res, next) => {
     })
 }
 
-exports.person_info = (req, res, next) => {
-    Product.findById(req.params.id, (err, personInfo) => {
-        if (err) return next(err)
-        res.send(personInfo)
-    })
-}
-
 exports.whole_list = (req, res, next) => {
     Product.find({}).sort('-date').exec((err,personList) => {
         if (err) return next(err)
