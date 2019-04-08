@@ -1,13 +1,14 @@
 const express = require('express')
 const router = express.Router()
+const ROUTE_SECRET = require('../routesecret.js')
 
 const product_controller = require('../controllers/content.controller')
 
-router.post(`/${process.env.ROUTE_SECRET}/create`, product_controller.product_create)
+router.post(`/${ROUTE_SECRET}/create`, product_controller.product_create)
 
-router.put(`/${process.env.ROUTE_SECRET}/:id/update`, product_controller.product_update)
+router.put(`/${ROUTE_SECRET}/:id/update`, product_controller.product_update)
 
-router.delete(`/${process.env.ROUTE_SECRET}/:id/delete`, product_controller.product_delete)
+router.delete(`/${ROUTE_SECRET}/:id/delete`, product_controller.product_delete)
 
 router.get('/projects', product_controller.proj_list)
 
