@@ -29,24 +29,15 @@ exports.person_info = (req, res, next) => {
 }
 
 exports.whole_list = (req, res, next) => {
-    if(isNaN(req.params.num)){
-        Product.find({}, (err, personList) => {
-            if (err) return next(err)
+    Product.find({}).sort('-date').exec((err,personList) => {
+        if (err) return next(err)
+        if(isNaN(req.params.num)){
             res.send(personList)
-        })
-    }
-    else{
-        Product.find({}, (err, personList) => {
-            if (err) return next(err)
-            let list = []
-            for(let i = 0;i<req.params.num;i++){
-                if(personList[i]!=null){
-                    list.push(personList[i])
-                }
-            }
-            res.send(list)
-        })
-    }
+        }
+        else{
+            res.send(personList.slice(0,req.params.num))
+        }
+    })
 }
 
 exports.comic_list = (req, res, next) => {
