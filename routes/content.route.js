@@ -3,11 +3,11 @@ const router = express.Router()
 
 const product_controller = require('../controllers/content.controller')
 
-router.post('/create', product_controller.product_create)
+router.post(`/${process.env.ROUTE_SECRET}/create`, product_controller.product_create)
 
-router.put('/:id/update', product_controller.product_update)
+router.put(`/${process.env.ROUTE_SECRET}/:id/update`, product_controller.product_update)
 
-router.delete('/:id/delete', product_controller.product_delete)
+router.delete(`/${process.env.ROUTE_SECRET}/:id/delete`, product_controller.product_delete)
 
 router.get('/projects', product_controller.proj_list)
 
