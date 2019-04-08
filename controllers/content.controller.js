@@ -41,28 +41,16 @@ exports.whole_list = (req, res, next) => {
 }
 
 exports.comic_list = (req, res, next) => {
-    Product.find({}, (err, personList) => {
+    Product.find({category:"comic"}).sort('-date').exec((err,personList) => {
         if (err) return next(err)
-        let list = []
-        personList.forEach((user)=> {
-            if(user.category == "comic"){
-                list.push([user.title, user.id,user.img,user.date,user.url])
-            }
-        })
-        res.send(list)
+        res.send(personList)
     })
 }
 
 exports.proj_list = (req, res, next) => {
-    Product.find({}, (err, personList) => {
+    Product.find({category:"project"}).sort('-date').exec((err,personList) => {
         if (err) return next(err)
-        let list = []
-        personList.forEach((user)=> {
-            if(user.category == "project"){
-                list.push([user.title, user.id,user.img,user.date,user.url])
-            }
-        })
-        res.send(list)
+        res.send(personList)
     })
 }
 
