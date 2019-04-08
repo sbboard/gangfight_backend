@@ -10,9 +10,7 @@ router.put(`/${ROUTE_SECRET}/:id/update`, product_controller.product_update)
 
 router.delete(`/${ROUTE_SECRET}/:id/delete`, product_controller.product_delete)
 
-router.get('/projects', product_controller.proj_list)
-
-router.get('/comics', product_controller.comic_list)
+router.get('/category/:cat', product_controller.category_list)
 
 router.get('/:num?', product_controller.whole_list)
 

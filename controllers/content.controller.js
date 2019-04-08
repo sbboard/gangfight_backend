@@ -33,15 +33,8 @@ exports.whole_list = (req, res, next) => {
     })
 }
 
-exports.comic_list = (req, res, next) => {
-    Product.find({category:"comic"}).sort('-date').exec((err,personList) => {
-        if (err) return next(err)
-        res.send(personList)
-    })
-}
-
-exports.proj_list = (req, res, next) => {
-    Product.find({category:"project"}).sort('-date').exec((err,personList) => {
+exports.category_list = (req, res, next) => {
+    Product.find({category:req.params.cat}).sort('-date').exec((err,personList) => {
         if (err) return next(err)
         res.send(personList)
     })
