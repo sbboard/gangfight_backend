@@ -40,6 +40,13 @@ exports.category_list = (req, res, next) => {
     })
 }
 
+exports.comic_info = (req, res, next) => {
+    Product.find({_id:req.params.id}).exec((err,personList) => {
+        if (err) return next(err)
+        res.send(personList)
+    })
+}
+
 exports.product_update = (req, res, next) => {
     Product.findByIdAndUpdate(req.params.id, { $set: req.body},
         (err, product) => {
