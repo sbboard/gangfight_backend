@@ -19,6 +19,8 @@ app.use(function (req, res, next) {
     var whitelist = [
       'http://159.65.188.38',
       'http://192.168.56.1:8080',
+      'https://www.gang-fight.com',
+      'http://www.gang-fight.com',
     ];
     var origin = req.headers.origin;
     if (whitelist.indexOf(origin) > -1) {

@@ -9,7 +9,9 @@ const GangContent = new Schema({
     url: {type: String, required: true},
     category: {type: String},
     date: {type: Date, required: true},
-    series: {type: String}
+    series: {type: String},
+    assetFolder: {type: String},
+    comicsArray: {type: Array},
 })
 
 module.exports = mongoose.model('content', GangContent)
