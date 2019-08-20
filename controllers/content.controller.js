@@ -1,18 +1,29 @@
 const Product = require('../models/content.model')
 
 exports.product_create = (req, res, next) => {
-    let name = req.files.img.name;
+    let name = req.files.img.name
+    let detUrl = ""
+    let detArray = []
     req.files.img.mv('/var/www/html/assets/contentImages/'+name)
+    if(req.body.comicSource == "Upload"){
+        let projNameNoSpecial = req.body.title.replace(/\s/g, '') + req.body.subtitle.replace(/\s/g, '')
+        detUrl = projNameNoSpecial
+        //create assetFolder if needed using projNameNoSpecial
+        //move files to assetFolder
+    }
+    else{
+        detUrl = req.body.url
+        //set a blank comicsarray
+    }
     let product = new Product({
         title: req.body.title,
         subtitle: req.body.subtitle,
         img: name,
-        url: req.body.url,
+        url: detUrl,
         category: req.body.category,
         date: Date(),
         series: req.body.series,
-        assetFolder: req.body.folder,
-        comicsArray: req.body.comicsArray,
+        comicsArray: detArray,
     })
 
     product.save((err) => {
