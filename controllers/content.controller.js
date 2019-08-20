@@ -1,4 +1,5 @@
 const Product = require('../models/content.model')
+var fs = require('fs');
 
 exports.product_create = (req, res, next) => {
     let name = req.files.img.name
@@ -7,13 +8,17 @@ exports.product_create = (req, res, next) => {
     req.files.img.mv('/var/www/html/assets/contentImages/'+name)
     if(req.body.comicSource == "Upload"){
         let projNameNoSpecial = req.body.title.replace(/\s/g, '') + req.body.subtitle.replace(/\s/g, '')
+        let dir = `/var/www/html/assets/comics/${projNameNoSpecial}`
         detUrl = projNameNoSpecial
+        if (!fs.existsSync(dir)){
+            fs.mkdirSync(dir);
+        }
+        console.log(req.files.upload)
         //create assetFolder if needed using projNameNoSpecial
         //move files to assetFolder
     }
     else{
         detUrl = req.body.url
-        //set a blank comicsarray
     }
     let product = new Product({
         title: req.body.title,
