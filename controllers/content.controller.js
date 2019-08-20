@@ -10,7 +10,9 @@ exports.product_create = (req, res, next) => {
         url: req.body.url,
         category: req.body.category,
         date: Date(),
-        series: req.body.series
+        series: req.body.series,
+        assetFolder: req.body.folder,
+        comicsArray: req.body.comicsArray,
     })
 
     product.save((err) => {
