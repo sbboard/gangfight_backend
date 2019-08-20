@@ -13,9 +13,10 @@ exports.product_create = (req, res, next) => {
         if (!fs.existsSync(dir)){
             fs.mkdirSync(dir);
         }
-        console.log(req.files.upload)
-        //create assetFolder if needed using projNameNoSpecial
-        //move files to assetFolder
+        for(let i=0;i<req.files.pages.length;i++){
+            req.files.pages[i].mv(dir+"/"+req.files.pages[i].name)
+            detArray.push(req.files.pages[i].name)
+        }
     }
     else{
         detUrl = req.body.url
