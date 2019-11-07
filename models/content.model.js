@@ -9,6 +9,7 @@ const GangContent = new Schema({
     url: {type: String, required: true},
     category: {type: String},
     date: {type: Date, required: true},
+    updatedDate: {type: Date},
     series: {type: String},
     assetFolder: {type: String},
     comicsArray: {type: Array},
