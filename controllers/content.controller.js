@@ -2,10 +2,12 @@ const Product = require('../models/content.model')
 var fs = require('fs');
 
 exports.product_create = (req, res, next) => {
+    //handle thumbnail image
     let name = req.files.img.name
     let detUrl = ""
     let detArray = []
     req.files.img.mv('/var/www/html/assets/contentImages/'+name)
+    //handle comicsArray or URL
     if(req.body.comicSource == "Upload"){
         let projNameNoSpecial = req.body.title.replace(/\s/g, '') + req.body.subtitle.replace(/\s/g, '')
         let dir = `/var/www/html/assets/comics/${projNameNoSpecial}`
@@ -30,6 +32,7 @@ exports.product_create = (req, res, next) => {
         date: Date(),
         series: req.body.series,
         comicsArray: detArray,
+        updatedDate: Date(),
     })
 
     product.save((err) => {
@@ -37,6 +40,46 @@ exports.product_create = (req, res, next) => {
             return next(err)
         }
         res.send('Content Posted')
+    })
+}
+
+exports.post_update = (req, res, next) => {
+    //get info from old post
+    const contentUpdating = req.body.contentUpdating
+    let name = ''
+    let oldContent = {}
+    .findById(contentUpdating).exec((err, content) => oldContent = content);
+    //handle thumbnail
+    if(req.files.img.name != null){
+        name = req.files.img.name
+        req.files.img.mv('/var/www/html/assets/contentImages/'+name)
+    }
+    else{
+        name = content.img
+    }
+    //update old project
+    Product.findByIdAndUpdate(contentUpdating, { $set: {
+        updatedDate: Date(),
+        img: name
+    }})
+    //add new update for homepage
+    let product = new Product({
+        title: oldContent.title,
+        subtitle: req.body.subtitle,
+        img: name,
+        url: oldContent.url,
+        category: "update",
+        date: Date(),
+        series: oldContent.series,
+        comicsArray: oldContent.comicsArray,
+        updatedDate: Date(),
+    })
+
+    product.save((err) => {
+        if (err){
+            return next(err)
+        }
+        res.send('Update Posted')
     })
 }
 
