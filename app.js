@@ -8,7 +8,7 @@ const MONDO_SECRET = require('./mondosecret.js')
 //connect to mongoDB
 const dev_db_url = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`
 const mongoDB = process.env.MONGODB_URI || dev_db_url
-mongoose.connect(mongoDB, {useNewUrlParser: true})
+mongoose.connect(mongoDB, {useNewUrlParser: true, useUnifiedTopology: true})
 mongoose.Promise = global.Promise
 const db = mongoose.connection
 db.on('error', console.error.bind(console, 'MongoDB connection error:'))

@@ -53,7 +53,7 @@ exports.whole_list = (req, res, next) => {
 }
 
 exports.category_list = (req, res, next) => {
-    Product.find({category:req.params.cat}).sort('-date').exec((err,personList) => {
+    Product.find({category:req.params.cat}).sort('-updatedDate').exec((err,personList) => {
         if (err) return next(err)
         res.send(personList)
     })
