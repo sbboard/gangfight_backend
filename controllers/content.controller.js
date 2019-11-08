@@ -1,15 +1,10 @@
 const Product = require('../models/content.model')
 var fs = require('fs');
 
-function retrieveUser(uname, callback) {
-    Product.findById(uname, function(err, users) {
-      if (err) {
-        callback(err, null);
-      } else {
-        callback(null, users[0]);
-      }
-    })
-}
+function searchIdPromise(id){
+    var promise = Product.find({_id:id}).exec();
+    return promise;
+ }
 
 exports.product_create = (req, res, next) => {
     //handle thumbnail image
@@ -55,16 +50,10 @@ exports.product_create = (req, res, next) => {
 
 exports.post_update = (req, res, next) => {
     //get info from old post
-    const contentUpdating = req.body.contentUpdating
-    let name = ''
-    Product
-    .findOne({_id: contentUpdating})
-    .exec()
-    .then((result) => {
-        return Product.findOne({}).exec()
-    })
-    .then((oldContent)=>{
+    let promise = searchIdPromise(req.body.contentUpdating)
+    promise.then((oldContent)=>{
         //handle thumbnail
+        console.log(oldContent)
         if(req.hasOwnProperty('files')){
             name = req.files.img.name
             req.files.img.mv('/var/www/html/assets/contentImages/'+name)
@@ -74,22 +63,22 @@ exports.post_update = (req, res, next) => {
         }
         //add new update for homepage
         let product = new Product({
-            title: oldContent.title,
+            title: oldContent[0].title,
             subtitle: req.body.subtitle,
             img: name,
-            url: oldContent.url,
+            url: oldContent[0].url,
             category: "update",
             date: Date(),
-            series: oldContent.series,
-            comicsArray: oldContent.comicsArray,
+            series: oldContent[0].series,
+            comicsArray: oldContent[0].comicsArray,
             updatedDate: Date(),
         })
-        return {'product': product, 'name': name}
+        return {'product': product, 'name': name, 'updating': req.body.contentUpdating}
     })
     .then((deliverable)=>{
         //update old project
         Product
-        .findByIdAndUpdate(contentUpdating, { $set: {
+        .findByIdAndUpdate(deliverable.updating, { $set: {
             updatedDate: Date(),
             img: deliverable.name,
         }}).exec()
