@@ -91,7 +91,7 @@ exports.post_update = (req, res, next) => {
         Product
         .findByIdAndUpdate(contentUpdating, { $set: {
             updatedDate: Date(),
-            img: deliverable.name
+            img: deliverable.name,
         }}).exec()
         return deliverable.product
     })
