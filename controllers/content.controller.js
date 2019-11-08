@@ -1,6 +1,16 @@
 const Product = require('../models/content.model')
 var fs = require('fs');
 
+function retrieveUser(uname, callback) {
+    Product.findById(uname, function(err, users) {
+      if (err) {
+        callback(err, null);
+      } else {
+        callback(null, users[0]);
+      }
+    })
+}
+
 exports.product_create = (req, res, next) => {
     //handle thumbnail image
     let name = req.files.img.name
@@ -47,40 +57,51 @@ exports.post_update = (req, res, next) => {
     //get info from old post
     const contentUpdating = req.body.contentUpdating
     let name = ''
-    let oldContent = {}
-    .findById(contentUpdating).exec((err, content) => oldContent = content);
-    //handle thumbnail
-    if(req.files.img.name != null){
-        name = req.files.img.name
-        req.files.img.mv('/var/www/html/assets/contentImages/'+name)
-    }
-    else{
-        name = content.img
-    }
-    //update old project
-    Product.findByIdAndUpdate(contentUpdating, { $set: {
-        updatedDate: Date(),
-        img: name
-    }})
-    //add new update for homepage
-    let product = new Product({
-        title: oldContent.title,
-        subtitle: req.body.subtitle,
-        img: name,
-        url: oldContent.url,
-        category: "update",
-        date: Date(),
-        series: oldContent.series,
-        comicsArray: oldContent.comicsArray,
-        updatedDate: Date(),
+    Product
+    .findOne({_id: contentUpdating})
+    .exec()
+    .then((result) => {
+        return Product.findOne({}).exec()
     })
-
+    .then((oldContent)=>{
+        //handle thumbnail
+        if(req.hasOwnProperty('files')){
+            name = req.files.img.name
+            req.files.img.mv('/var/www/html/assets/contentImages/'+name)
+        }
+        else{
+            name = oldContent.img
+        }
+        //add new update for homepage
+        let product = new Product({
+            title: oldContent.title,
+            subtitle: req.body.subtitle,
+            img: name,
+            url: oldContent.url,
+            category: "update",
+            date: Date(),
+            series: oldContent.series,
+            comicsArray: oldContent.comicsArray,
+            updatedDate: Date(),
+        })
+        return {'product': product, 'name': name}
+    })
+    .then((deliverable)=>{
+        //update old project
+        Product
+        .findByIdAndUpdate(contentUpdating, { $set: {
+            updatedDate: Date(),
+            img: deliverable.name
+        }}).exec()
+        return deliverable.product
+    })
+    .then((product)=>
     product.save((err) => {
         if (err){
             return next(err)
         }
         res.send('Update Posted')
-    })
+    }))
 }
 
 exports.whole_list = (req, res, next) => {
