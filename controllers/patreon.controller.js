@@ -5,11 +5,20 @@ const accessToken = patreonInfo.AccessToken;
 const campID = "4942396";
 
 const patreonAPIClient = patreonAPI(accessToken);
+function checkUser(item) {
+  return item.type == "user" && item.attributes.full_name != "Colin Buffum";
+}
 
 exports.patreon = (req, res, next) => {
   patreonAPIClient(`/campaigns/${campID}/pledges`)
     .then((result) => {
-      res.send(result.rawJson);
+      let theIncluded = result.rawJson.included;
+      let weeded = (theIncluded || []).filter(checkUser);
+      let cleanArray = [];
+      weeded.map((v) => {
+        cleanArray.push({ name: v.attributes.full_name, id: v.id });
+      });
+      res.send(cleanArray);
     })
     .catch((err) => {
       console.error("error!", err);
