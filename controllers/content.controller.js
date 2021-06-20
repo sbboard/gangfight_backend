@@ -6,6 +6,11 @@ function searchIdPromise(id) {
   return promise;
 }
 
+let CTA = `<a href='/gf_gambee'>let's go home</a>`
+let posted = `Posted!<br/>${CTA}`
+let deleted = `Deleted!<br/>${CTA}`
+let updated = `Updated!<br/>${CTA}`
+
 exports.product_create = (req, res, next) => {
   //handle thumbnail image
   let name = req.files.img.name;
@@ -50,7 +55,7 @@ exports.product_create = (req, res, next) => {
     if (err) {
       return next(err);
     }
-    res.send("Content Posted");
+    res.send(posted);
   });
 };
 
@@ -100,7 +105,7 @@ exports.post_update = (req, res, next) => {
         if (err) {
           return next(err);
         }
-        res.send("Update Posted");
+        res.send(posted);
       })
     );
 };
@@ -140,7 +145,7 @@ exports.product_update = (req, res, next) => {
     { $set: req.body },
     (err, product) => {
       if (err) return next(err);
-      res.send("Content updated");
+      res.send(updated);
     }
   );
 };
@@ -148,6 +153,6 @@ exports.product_update = (req, res, next) => {
 exports.product_delete = (req, res, next) => {
   Product.findByIdAndRemove(req.params.id, (err) => {
     if (err) return next(err);
-    res.send("Deleted successfully");
+    res.send(deleted);
   });
 };
