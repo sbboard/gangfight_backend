@@ -6,10 +6,10 @@ function searchIdPromise(id) {
   return promise;
 }
 
-let CTA = `<a href='/gf_gambee'>let's go home</a>`
-let posted = `Posted!<br/>${CTA}`
-let deleted = `Deleted!<br/>${CTA}`
-let updated = `Updated!<br/>${CTA}`
+let CTA = `<a href='/gf_gambee'>let's go home</a>`;
+let posted = `Posted!<br/>${CTA}`;
+let deleted = `Deleted!<br/>${CTA}`;
+let updated = `Updated!<br/>${CTA}`;
 
 exports.product_create = (req, res, next) => {
   //handle thumbnail image
@@ -139,10 +139,10 @@ exports.comic_info = (req, res, next) => {
   });
 };
 
-exports.product_update = (req, res, next) => {
+exports.update_series = (req, res, next) => {
   Product.findByIdAndUpdate(
     req.params.id,
-    { $set: req.body },
+    { series: req.body.series },
     (err, product) => {
       if (err) return next(err);
       res.send(updated);

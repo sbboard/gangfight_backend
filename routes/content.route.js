@@ -10,8 +10,7 @@ router.post(`/${ROUTE_SECRET}/create`, product_controller.product_create);
 //update posts a new item under the update category
 router.post(`/${ROUTE_SECRET}/update`, product_controller.post_update);
 
-//edit is used to edit existing fields
-router.put(`/${ROUTE_SECRET}/:id/edit`, product_controller.product_update);
+router.put(`/${ROUTE_SECRET}/:id/seriesChange`, product_controller.update_series);
 
 router.delete(`/${ROUTE_SECRET}/:id/delete`, product_controller.product_delete);
 
