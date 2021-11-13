@@ -6,7 +6,7 @@ const campID = "4942396";
 
 const patreonAPIClient = patreonAPI(accessToken);
 function checkUser(item) {
-  return item.type == "user" && item.attributes.full_name != "Colin Buffum";
+  return item.type == "user" && item.attributes.full_name != "Gang Fight";
 }
 
 exports.patreon = (req, res, next) => {
