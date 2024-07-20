@@ -24,12 +24,12 @@ const updated = `Updated!<br/>${CTA}`;
 exports.product_create = (req, res, next) => {
   //handle thumbnail image
   let name = generateUniqueName(thumbDir, req.files.img.name);
-  req.files.img.mv(path.join(thumbDir, uniqueName), (err) => {
+  req.files.img.mv(path.join(thumbDir, name), (err) => {
     if (err) {
       console.error("Error moving file:", err);
       return res.status(500).send("File upload failed.");
     }
-    res.send("File uploaded successfully as " + uniqueName);
+    res.send("File uploaded successfully as " + name);
   });
 
   //handle comicsArray or URL
