@@ -1,32 +1,45 @@
 const Product = require("../models/content.model");
 var fs = require("fs");
+const path = require("path");
 
-function searchIdPromise(id) {
-  var promise = Product.find({ _id: id }).exec();
-  return promise;
-}
+const searchIdPromise = (id) => Product.find({ _id: id }).exec();
+const generateUniqueName = (basePath, fileName) => {
+  const ext = path.extname(fileName);
+  const baseName = path.basename(fileName, ext);
+  let uniqueName = fileName;
+  let counter = 1;
+  while (fs.existsSync(basePath + uniqueName)) {
+    uniqueName = `${baseName}_${counter}${ext}`;
+    counter++;
+  }
+  return uniqueName;
+};
 
-let CTA = `<a href='/gf_gambee'>let's go home</a>`;
-let posted = `Posted!<br/>${CTA}`;
-let deleted = `Deleted!<br/>${CTA}`;
-let updated = `Updated!<br/>${CTA}`;
+const thumbDir = "/var/www/html/assets/contentImages/";
+const CTA = `<a href='/gf_gambee'>let's go home</a>`;
+const posted = `Posted!<br/>${CTA}`;
+const deleted = `Deleted!<br/>${CTA}`;
+const updated = `Updated!<br/>${CTA}`;
 
 exports.product_create = (req, res, next) => {
   //handle thumbnail image
-  let name = req.files.img.name;
-  let detUrl = "";
-  let detArray = [];
-  req.files.img.mv("/var/www/html/assets/contentImages/" + name);
-  //handle comicsArray or URL
-  if (req.body.comicSource == "Upload") {
-    let projNameNoSpecial =
-      req.body.title.replace(/[^\w]/gi, "") +
-      req.body.subtitle.replace(/[^\w]/gi, "");
-    let dir = `/var/www/html/assets/comics/${projNameNoSpecial}`;
-    detUrl = projNameNoSpecial;
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir);
+  let name = generateUniqueName(thumbDir, req.files.img.name);
+  req.files.img.mv(path.join(thumbDir, uniqueName), (err) => {
+    if (err) {
+      console.error("Error moving file:", err);
+      return res.status(500).send("File upload failed.");
     }
+    res.send("File uploaded successfully as " + uniqueName);
+  });
+
+  //handle comicsArray or URL
+  const detArray = [];
+  const { title: t, subtitle: s } = req.body;
+  const projName = t.replace(/[^\w]/gi, "") + s.replace(/[^\w]/gi, "");
+  const isUpload = req.body.comicSource == "Upload";
+  if (isUpload) {
+    const dir = `/var/www/html/assets/comics/${projName}`;
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
     if (Array.isArray(req.files.pages)) {
       for (let i = 0; i < req.files.pages.length; i++) {
         req.files.pages[i].mv(dir + "/" + req.files.pages[i].name);
@@ -36,14 +49,13 @@ exports.product_create = (req, res, next) => {
       req.files.pages.mv(dir + "/" + req.files.pages.name);
       detArray.push(req.files.pages.name);
     }
-  } else {
-    detUrl = req.body.url;
   }
+  const url = isUpload ? projName : req.body.url;
   let product = new Product({
-    title: req.body.title,
-    subtitle: req.body.subtitle,
+    title: t,
+    subtitle: s,
     img: name,
-    url: detUrl,
+    url,
     category: req.body.category,
     date: Date(),
     series: req.body.series,
@@ -52,23 +64,21 @@ exports.product_create = (req, res, next) => {
   });
 
   product.save((err) => {
-    if (err) {
-      return next(err);
-    }
+    if (err) return next(err);
     res.send(posted);
   });
 };
 
 exports.post_update = (req, res, next) => {
+  let name = "";
   //get info from old post
   let promise = searchIdPromise(req.body.contentUpdating);
   promise
     .then((oldContent) => {
       //handle thumbnail
-      console.log(oldContent);
       if (req.hasOwnProperty("files")) {
-        name = req.files.img.name;
-        req.files.img.mv("/var/www/html/assets/contentImages/" + name);
+        name = generateUniqueName(thumbDir, req.files.img.name);
+        req.files.img.mv(thumbDir + name);
       } else {
         name = oldContent.img;
       }
