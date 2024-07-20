@@ -16,19 +16,9 @@ db.on("error", console.error.bind(console, "MongoDB connection error:"));
 const app = express();
 app.use(fileUpload());
 app.use(function (req, res, next) {
-  var whitelist = [
-    "http://159.65.188.38",
-    "http://192.168.56.1:8080",
-    "https://www.gang-fight.com",
-    "http://www.gang-fight.com",
-  ];
-  var origin = req.headers.origin;
-  if (whitelist.indexOf(origin) > -1) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  //res.setHeader("Access-Control-Allow-Origin", req.getHeader("Origin"));
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Access-Control-Allow-Headers, Access-Control-Allow-Origin, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization"
