@@ -148,7 +148,7 @@ exports.comic_info = (req, res, next) => {
 exports.update_iframe = (req, res, next) => {
   Product.findByIdAndUpdate(
     req.params.id,
-    { iframe: req.body.series },
+    { iframe: req.body.iframe },
     (err, product) => {
       if (err) return next(err);
       res.send(updated);
