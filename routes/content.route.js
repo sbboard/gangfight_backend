@@ -10,7 +10,15 @@ router.post(`/${ROUTE_SECRET}/create`, product_controller.product_create);
 //update posts a new item under the update category
 router.post(`/${ROUTE_SECRET}/update`, product_controller.post_update);
 
-router.put(`/${ROUTE_SECRET}/:id/seriesChange`, product_controller.update_series);
+router.put(
+  `/${ROUTE_SECRET}/:id/seriesChange`,
+  product_controller.update_series
+);
+
+router.put(
+  `/${ROUTE_SECRET}/:id/iframeChange`,
+  product_controller.update_iframe
+);
 
 router.delete(`/${ROUTE_SECRET}/:id/delete`, product_controller.product_delete);
 
