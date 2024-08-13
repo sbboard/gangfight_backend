@@ -149,9 +149,10 @@ exports.update_iframe = (req, res, next) => {
   Product.findByIdAndUpdate(
     req.params.id,
     { iframe: req.body.iframe },
-    (err, product) => {
+    { new: true },
+    (err, updatedProduct) => {
       if (err) return next(err);
-      res.send(updated);
+      res.send(updatedProduct);
     }
   );
 };
