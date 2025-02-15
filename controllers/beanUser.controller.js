@@ -1,5 +1,5 @@
 const { User } = require("../models/beans.model.js");
-const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 
 // Register a new user
 exports.registerUser = async (req, res, next) => {
@@ -12,8 +12,11 @@ exports.registerUser = async (req, res, next) => {
       return res.status(400).json({ message: "Username already taken" });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash the password using crypto
+    const hashedPassword = crypto
+      .createHash("sha256")
+      .update(password)
+      .digest("hex");
 
     // Create a new user
     const user = new User({
@@ -39,9 +42,12 @@ exports.loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
-    // Compare passwords
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    const hashedInputPassword = crypto
+      .createHash("sha256")
+      .update(password)
+      .digest("hex");
+
+    if (hashedInputPassword !== user.password) {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
