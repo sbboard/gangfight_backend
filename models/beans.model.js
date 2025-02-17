@@ -13,6 +13,7 @@ const pollSchema = new Schema({
   description: { type: String, required: true },
   endDate: { type: Date, required: true },
   winner: { type: String, default: null },
+  creationDate: { type: Date, required: true, default: Date.now },
   options: [pollOptionSchema],
   contentType: {
     type: String,
@@ -26,6 +27,7 @@ const pollSchema = new Schema({
 const userSchema = new Schema({
   name: { type: String, required: true },
   password: { type: String, required: true },
+  registrationDate: { type: Date, required: true, default: Date.now },
   wins: [{ type: String, required: true }], // Store poll IDs as strings
   contentType: {
     type: String,
