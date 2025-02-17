@@ -14,11 +14,9 @@ const handleRequest = (req, res, collectionName, controllerMethod) => {
 router.post("/polls/create", (req, res) =>
   handleRequest(req, res, "polls", pollController.createPoll)
 );
-
 router.post("/polls/random", (req, res) =>
   handleRequest(req, res, "polls", pollController.createRandomPoll)
 );
-
 router.get("/polls/", (req, res) =>
   handleRequest(req, res, "polls", pollController.getAllPolls)
 );
@@ -31,6 +29,10 @@ router.post("/polls/bet", (req, res) =>
 router.delete("/polls/:id/delete", (req, res) =>
   handleRequest(req, res, "polls", pollController.deletePoll)
 );
+router.post(
+  "/polls/set-winner",
+  handleRequest(req, res, "polls", pollController.setPollWinner)
+);
 
 // User Routes
 router.get("/user/:id", (req, res) =>
@@ -41,9 +43,6 @@ router.post("/user/register", (req, res) =>
 );
 router.post("/user/login", (req, res) =>
   handleRequest(req, res, "users", userController.loginUser)
-);
-router.put("/user/:id/win", (req, res) =>
-  handleRequest(req, res, "users", userController.addWin)
 );
 
 module.exports = router;

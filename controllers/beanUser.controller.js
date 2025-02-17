@@ -26,7 +26,10 @@ exports.registerUser = async (req, res, next) => {
     });
 
     await user.save();
-    res.status(201).json({ message: "User registered successfully", user });
+    res.status(201).json({
+      message: "User registered successfully",
+      user,
+    });
   } catch (error) {
     next(error);
   }
@@ -51,7 +54,7 @@ exports.loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
-    res.json({ message: "Login successful", userId: user._id });
+    res.json({ message: "Login successful", user });
   } catch (error) {
     next(error);
   }
@@ -64,23 +67,6 @@ exports.getUser = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json(user);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// Update user wins (Add a poll ID to the wins array)
-exports.addWin = async (req, res, next) => {
-  try {
-    const { userId, pollId } = req.body;
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.wins.push(pollId);
-    await user.save();
-
-    res.json({ message: "Win added successfully", user });
   } catch (error) {
     next(error);
   }

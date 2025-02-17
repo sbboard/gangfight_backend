@@ -59,7 +59,7 @@ exports.createPoll = async (req, res, next) => {
 // Get all polls
 exports.getAllPolls = async (req, res, next) => {
   try {
-    const polls = await Poll.find().sort("-endDate");
+    const polls = await Poll.find({ contentType: "poll" }).sort("-endDate");
     res.json(polls);
   } catch (error) {
     next(error);
@@ -78,27 +78,58 @@ exports.getPollById = async (req, res, next) => {
   }
 };
 
-// Place a bet (vote) on an option
+// Place a bet (vote) on an option using optionId
 exports.placeBet = async (req, res, next) => {
   try {
-    const { pollId, optionIndex, userId } = req.body;
+    const { pollId, optionId, userId } = req.body;
 
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    // Validate option index
-    if (
-      !Number.isInteger(optionIndex) ||
-      optionIndex < 0 ||
-      optionIndex >= poll.options.length
-    ) {
-      return res.status(400).json({ message: "Invalid option index" });
+    // Find the option by ID
+    const option = poll.options.find((opt) => opt._id.toString() === optionId);
+    if (!option) {
+      return res.status(400).json({ message: "Invalid option ID" });
     }
 
-    poll.options[optionIndex].betters.push(userId);
+    // Add user to the betters array
+    option.betters.push(userId);
     await poll.save();
 
     res.json({ message: "Bet placed successfully", poll });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Set the winner of a poll
+exports.setPollWinner = async (req, res, next) => {
+  try {
+    const { pollId, optionId } = req.body;
+
+    // Find the poll by ID
+    const poll = await Poll.findById(pollId);
+    if (!poll) return res.status(404).json({ message: "Poll not found" });
+
+    // Check if the option exists within the poll
+    const winningOption = poll.options.find(
+      (option) => option._id.toString() === optionId
+    );
+    if (!winningOption) {
+      return res.status(400).json({ message: "Invalid option ID" });
+    }
+
+    // Update the winner field
+    poll.winner = optionId;
+    await poll.save();
+
+    // Add a win to all users who voted for the winning option
+    await User.updateMany(
+      { _id: { $in: winningOption.betters } },
+      { $push: { wins: pollId } }
+    );
+
+    res.json({ message: "Winner set successfully, wins updated", poll });
   } catch (error) {
     next(error);
   }
