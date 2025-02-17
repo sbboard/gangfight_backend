@@ -1,4 +1,4 @@
-const { Poll } = require("../models/beans.model.js");
+const { Poll, User } = require("../models/beans.model.js");
 
 // Helper function to generate random string (for titles, descriptions, etc.)
 const generateRandomString = (length) => {
