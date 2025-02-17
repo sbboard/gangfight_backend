@@ -59,7 +59,7 @@ exports.createPoll = async (req, res, next) => {
 // Get all polls
 exports.getAllPolls = async (req, res, next) => {
   try {
-    const polls = await Poll.find({ contentType: "poll" }).sort("-endDate");
+    const polls = await Poll.find({ contentType: "poll" }).sort("endDate");
     res.json(polls);
   } catch (error) {
     next(error);
