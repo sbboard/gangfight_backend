@@ -12,7 +12,7 @@ const pollSchema = new Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   endDate: { type: Date, required: true },
-  winner: { type: String, required: true, default: "" },
+  winner: { type: String, default: null },
   options: [pollOptionSchema],
   contentType: {
     type: String,
