@@ -34,14 +34,17 @@ router.get("/polls/", (req, res, next) =>
 );
 
 // User Routes
-router.post("/user/register", (req, res) =>
-  handleRequest(req, res, "users", userController.registerUser)
+router.post("/user/register", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.registerUser)
 );
-router.post("/user/login", (req, res) =>
-  handleRequest(req, res, "users", userController.loginUser)
+router.post("/user/login", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.loginUser)
 );
-router.get("/user/:id", (req, res) =>
-  handleRequest(req, res, "users", userController.getUser)
+router.get("/user/winners", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.getWinners)
+);
+router.get("/user/:id", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.getUser)
 );
 
 module.exports = router;
