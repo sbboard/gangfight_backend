@@ -15,11 +15,17 @@ const pollSchema = new Schema({
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
   options: [pollOptionSchema],
+  abstained: [{ type: String, required: true }], // Store user IDs as strings
   contentType: {
     type: String,
     required: true,
     default: "poll",
     immutable: true,
+  },
+  pollType: {
+    type: String,
+    required: true,
+    default: "bet",
   },
 });
 
@@ -27,6 +33,8 @@ const pollSchema = new Schema({
 const userSchema = new Schema({
   name: { type: String, required: true },
   password: { type: String, required: true },
+  inventory: [{ type: String, required: true }],
+  beans: { type: Number, required: true, default: 100 },
   registrationDate: { type: Date, default: Date.now },
   wins: [{ type: String, required: true }], // Store poll IDs as strings
   contentType: {

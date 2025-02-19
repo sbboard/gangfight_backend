@@ -1,47 +1,5 @@
 const { Poll, User } = require("../models/beans.model.js");
 
-// Helper function to generate random string (for titles, descriptions, etc.)
-const generateRandomString = (length) => {
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-};
-
-// Helper function to generate random options for the poll
-const generateRandomOptions = (numOptions = 3) => {
-  let options = [];
-  for (let i = 0; i < numOptions; i++) {
-    options.push({
-      text: `Option ${i + 1}: ${generateRandomString(10)}`, // Random option text
-      betters: [],
-    });
-  }
-  return options;
-};
-
-// Create a random poll
-exports.createRandomPoll = async (req, res, next) => {
-  try {
-    const creatorId = `user${Math.floor(Math.random() * 1000)}`; // Random creator ID
-    const title = `Poll: ${generateRandomString(10)}`; // Random poll title
-    const description = `Description: ${generateRandomString(30)}`; // Random description
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + Math.floor(Math.random() * 10)); // Random end date (1-10 days from now)
-    const options = generateRandomOptions(); // Generate random poll options
-
-    const poll = new Poll({ creatorId, title, description, endDate, options });
-    await poll.save();
-
-    res.status(201).json({ message: "Random poll created successfully", poll });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // Create a new poll
 exports.createPoll = async (req, res, next) => {
   try {

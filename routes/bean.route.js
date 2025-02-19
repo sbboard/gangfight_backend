@@ -17,9 +17,6 @@ router.post("/polls/create", (req, res, next) =>
 router.post("/polls/set-winner", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.setPollWinner)
 );
-router.post("/polls/random", (req, res, next) =>
-  handleRequest(req, res, next, "polls", pollController.createRandomPoll)
-);
 router.post("/polls/bet", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.placeBet)
 );
