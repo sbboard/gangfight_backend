@@ -1,9 +1,15 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
+const betSchema = new Schema({
+  bettor: { type: String },
+  shares: { type: Number },
+});
+
 const pollOptionSchema = new Schema({
   text: { type: String, required: true },
-  bettors: [{ type: String, required: true }], // Store user IDs as strings
+  bets: [betSchema],
+  bettors: [{ type: String, required: true }], // Store user IDs as strings (no be phased out)
 });
 
 // Poll Schema
@@ -14,6 +20,7 @@ const pollSchema = new Schema({
   endDate: { type: Date, required: true },
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
+  price: { type: Number, default: 10 },
   options: [pollOptionSchema],
   abstained: [{ type: String, required: true }], // Store user IDs as strings
   contentType: {
