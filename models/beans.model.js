@@ -3,7 +3,7 @@ const Schema = mongoose.Schema;
 
 const pollOptionSchema = new Schema({
   text: { type: String, required: true },
-  betters: [{ type: String, required: true }], // Store user IDs as strings
+  bettors: [{ type: String, required: true }], // Store user IDs as strings
 });
 
 // Poll Schema
@@ -32,8 +32,16 @@ const pollSchema = new Schema({
 // User Schema
 const userSchema = new Schema({
   name: { type: String, required: true },
+  displayName: {
+    type: String,
+    default: function () {
+      return this.name;
+    },
+  },
   password: { type: String, required: true },
+  role: { type: String, default: "user" },
   inventory: [{ type: String, required: true }],
+  probationEndDate: { type: Date, default: null },
   beans: { type: Number, required: true, default: 100 },
   registrationDate: { type: Date, default: Date.now },
   wins: [{ type: String, required: true }], // Store poll IDs as strings

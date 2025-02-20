@@ -50,8 +50,8 @@ exports.placeBet = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid option ID" });
     }
 
-    // Add user to the betters array
-    option.betters.push(userId);
+    // Add user to the bettors array
+    option.bettors.push(userId);
     await poll.save();
 
     res.json({ message: "Bet placed successfully", poll });
@@ -83,7 +83,7 @@ exports.setPollWinner = async (req, res, next) => {
 
     // Add a win to all users who voted for the winning option
     await User.updateMany(
-      { _id: { $in: winningOption.betters } },
+      { _id: { $in: winningOption.bettors } },
       { $push: { wins: pollId } }
     );
 
