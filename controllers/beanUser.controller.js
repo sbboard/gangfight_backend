@@ -74,9 +74,9 @@ exports.getUser = async (req, res, next) => {
 
 exports.getWinners = async (req, res, next) => {
   try {
-    const winners = await User.find({ "wins.0": { $exists: true } }).select(
-      "name wins"
-    );
+    const winners = await User.find()
+      .sort({ beans: -1 })
+      .select("name beans wins");
     res.json(winners);
   } catch (error) {
     next(error);
