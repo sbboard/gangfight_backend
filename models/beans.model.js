@@ -45,6 +45,7 @@ const userSchema = new Schema({
       return this.name;
     },
   },
+  lastIP: { type: String, required: true },
   password: { type: String, required: true },
   role: { type: String, default: "user" },
   inventory: [{ type: String, required: true }],
