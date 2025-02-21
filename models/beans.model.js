@@ -1,15 +1,9 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-const betSchema = new Schema({
-  bettor: { type: String },
-  shares: { type: Number },
-});
-
 const pollOptionSchema = new Schema({
   text: { type: String, required: true },
-  bets: [betSchema],
-  bettors: [{ type: String, required: true }], // Store user IDs as strings (no be phased out)
+  bettors: [{ type: String, required: true }],
 });
 
 // Poll Schema
@@ -18,22 +12,19 @@ const pollSchema = new Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   endDate: { type: Date, required: true },
+  settleDate: { type: Date, default: null },
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
-  price: { type: Number, default: 10 },
+  pricePerShare: { type: Number, default: 10 },
+  pot: { type: Number, default: 50 },
   options: [pollOptionSchema],
   abstained: [{ type: String, required: true }], // Store user IDs as strings
   contentType: {
     type: String,
-    required: true,
     default: "poll",
     immutable: true,
   },
-  pollType: {
-    type: String,
-    required: true,
-    default: "bet",
-  },
+  pollType: { type: String, default: "bet" },
 });
 
 // User Schema
@@ -45,17 +36,16 @@ const userSchema = new Schema({
       return this.name;
     },
   },
-  lastIP: { type: String, required: true },
+  lastIP: { type: String },
   password: { type: String, required: true },
   role: { type: String, default: "user" },
-  inventory: [{ type: String, required: true }],
+  inventory: [{ type: String }],
   probationEndDate: { type: Date, default: null },
-  beans: { type: Number, required: true, default: 100 },
+  beans: { type: Number, default: 100 },
   registrationDate: { type: Date, default: Date.now },
-  wins: [{ type: String, required: true }], // Store poll IDs as strings
+  wins: [{ type: String }], // Store poll IDs as strings
   contentType: {
     type: String,
-    required: true,
     default: "user",
     immutable: true,
   },
