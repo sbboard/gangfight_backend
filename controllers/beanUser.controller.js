@@ -82,3 +82,25 @@ exports.getWinners = async (req, res, next) => {
     next(error);
   }
 };
+
+// Update user information
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updateData = { ...req.body };
+
+    delete updateData.password;
+    delete updateData.contentType;
+
+    const user = await User.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ message: "User updated successfully", user });
+  } catch (error) {
+    next(error);
+  }
+};
