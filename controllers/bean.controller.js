@@ -52,7 +52,7 @@ exports.getPollById = async (req, res, next) => {
 // Place a bet (vote) on an option using optionId
 exports.placeBet = async (req, res, next) => {
   try {
-    const { pollId, optionId, userId } = req.body;
+    const { pollId, optionId, userId, shares } = req.body;
 
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
@@ -63,8 +63,26 @@ exports.placeBet = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid option ID" });
     }
 
-    // Add user to the bettors array
-    option.bettors.push(userId);
+    // Validate shares
+    if (!shares || shares < 1) {
+      return res.status(400).json({ message: "Invalid number of shares" });
+    }
+
+    // Find the user and check if they have enough beans
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const totalCost = poll.pricePerShare * shares;
+    if (user.beans < totalCost) {
+      return res.status(400).json({ message: "Insufficient beans" });
+    }
+
+    // Deduct beans and save the user
+    user.beans -= totalCost;
+    await user.save();
+
+    // Add user to the bettors array as many times as shares bought
+    option.bettors.push(...Array(shares).fill(userId));
     await poll.save();
 
     res.json({ message: "Bet placed successfully", poll });
