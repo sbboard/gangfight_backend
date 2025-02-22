@@ -40,7 +40,7 @@ const userSchema = new Schema({
   },
   lastIP: { type: String },
   password: { type: String, required: true },
-  role: { type: String, default: "user" },
+  role: { type: String, default: "spectator" },
   inventory: [{ type: String }],
   probationEndDate: { type: Date, default: null },
   beans: { type: Number, default: 10000000 },

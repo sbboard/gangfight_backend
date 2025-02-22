@@ -14,6 +14,9 @@ exports.createPoll = async (req, res, next) => {
       return res.status(400).json({ message: "Insufficient beans" });
     }
 
+    if (user.role == "spectator" || user.role == "bettor") {
+      user.role = "bookie";
+    }
     user.beans -= CREATION_FEE;
     await user.save();
 
@@ -80,6 +83,8 @@ exports.placeBet = async (req, res, next) => {
     if (user.beans < totalCost) {
       return res.status(400).json({ message: "Insufficient beans" });
     }
+
+    if (user.role == "spectator") user.role = "bettor";
 
     // Deduct beans and save the user
     user.beans -= totalCost;
