@@ -6,6 +6,8 @@ const pollOptionSchema = new Schema({
   bettors: [{ type: String, required: true }],
 });
 
+const CREATION_FEE = 2000000;
+
 // Poll Schema
 const pollSchema = new Schema({
   creatorId: { type: String, required: true }, // Store user ID as a string
@@ -15,8 +17,8 @@ const pollSchema = new Schema({
   settleDate: { type: Date, default: null },
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
-  pricePerShare: { type: Number, default: 1 },
-  pot: { type: Number, default: 2 }, //default is price of creation
+  pricePerShare: { type: Number, default: 1000000 },
+  pot: { type: Number, default: CREATION_FEE },
   options: [pollOptionSchema],
   abstained: [{ type: String, required: true }], // Store user IDs as strings
   contentType: {
@@ -41,7 +43,7 @@ const userSchema = new Schema({
   role: { type: String, default: "user" },
   inventory: [{ type: String }],
   probationEndDate: { type: Date, default: null },
-  beans: { type: Number, default: 10 },
+  beans: { type: Number, default: 10000000 },
   registrationDate: { type: Date, default: Date.now },
   wins: [{ type: String }], // Store poll IDs as strings
   contentType: {
@@ -55,4 +57,5 @@ const userSchema = new Schema({
 module.exports = {
   User: mongoose.model("User", userSchema, "beans"),
   Poll: mongoose.model("Poll", pollSchema, "beans"),
+  CREATION_FEE,
 };

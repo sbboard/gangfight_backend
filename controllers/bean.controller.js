@@ -1,4 +1,4 @@
-const { Poll, User } = require("../models/beans.model.js");
+const { Poll, User, CREATION_FEE } = require("../models/beans.model.js");
 
 // Create a new poll
 exports.createPoll = async (req, res, next) => {
@@ -14,7 +14,7 @@ exports.createPoll = async (req, res, next) => {
       return res.status(400).json({ message: "Insufficient beans" });
     }
 
-    user.beans -= 2;
+    user.beans -= CREATION_FEE;
     await user.save();
 
     // Create the poll
