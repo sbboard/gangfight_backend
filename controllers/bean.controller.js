@@ -122,14 +122,35 @@ exports.setPollWinner = async (req, res, next) => {
     let jackpot = poll.pot;
     const creator = await User.findById(poll.creatorId);
     if (creator) {
-      const payout = Math.floor(poll.pot * 0.1);
+      const payout = Math.floor(jackpot * 0.1);
       creator.beans += payout;
       await creator.save();
       jackpot -= payout;
     }
 
+    // Calculate individual payouts
+    const totalShares = winningOption.bettors.length;
+    if (totalShares > 0) {
+      const payoutPerShare = Math.floor(jackpot / totalShares);
+
+      // Aggregate shares per user
+      const userShares = {};
+      winningOption.bettors.forEach((userId) => {
+        userShares[userId] = (userShares[userId] || 0) + 1;
+      });
+
+      // Distribute payouts
+      for (const [userId, shares] of Object.entries(userShares)) {
+        const user = await User.findById(userId);
+        if (user) {
+          user.beans += payoutPerShare * shares;
+          await user.save();
+        }
+      }
+    }
+
     res.json({
-      message: "Winner set successfully, creator paid out, wins updated",
+      message: "Winner set, creator paid, jackpot distributed",
       poll,
     });
   } catch (error) {
