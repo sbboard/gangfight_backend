@@ -100,7 +100,20 @@ exports.setPollWinner = async (req, res, next) => {
       { $push: { wins: pollId } }
     );
 
-    res.json({ message: "Winner set successfully, wins updated", poll });
+    // Payout 10% of the jackpot to the poll creator
+    let jackpot = poll.pot;
+    const creator = await User.findById(poll.creatorId);
+    if (creator) {
+      const payout = Math.floor(poll.pot * 0.1);
+      creator.beans += payout;
+      await creator.save();
+      jackpot -= payout;
+    }
+
+    res.json({
+      message: "Winner set successfully, creator paid out, wins updated",
+      poll,
+    });
   } catch (error) {
     next(error);
   }
