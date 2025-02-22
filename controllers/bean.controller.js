@@ -21,7 +21,11 @@ exports.createPoll = async (req, res, next) => {
     const poll = new Poll({ creatorId, title, description, endDate, options });
     await poll.save();
 
-    res.status(201).json({ message: "Poll created successfully", poll });
+    res.status(201).json({
+      message: "Poll created successfully",
+      poll,
+      newBeanAmt: user.beans,
+    });
   } catch (error) {
     next(error);
   }
@@ -85,7 +89,11 @@ exports.placeBet = async (req, res, next) => {
     option.bettors.push(...Array(shares).fill(userId));
     await poll.save();
 
-    res.json({ message: "Bet placed successfully", poll });
+    res.json({
+      message: "Bet placed successfully",
+      poll,
+      newBeanAmt: user.beans,
+    });
   } catch (error) {
     next(error);
   }
@@ -152,6 +160,7 @@ exports.setPollWinner = async (req, res, next) => {
     res.json({
       message: "Winner set, creator paid, jackpot distributed",
       poll,
+      newBeanAmt: creator.beans,
     });
   } catch (error) {
     next(error);
@@ -164,7 +173,6 @@ exports.deletePoll = async (req, res, next) => {
     const deletedPoll = await Poll.findByIdAndDelete(req.params.id);
     if (!deletedPoll)
       return res.status(404).json({ message: "Poll not found" });
-
     res.json({ message: "Poll deleted successfully" });
   } catch (error) {
     next(error);
