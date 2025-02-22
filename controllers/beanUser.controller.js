@@ -74,7 +74,7 @@ exports.getUser = async (req, res, next) => {
 
 exports.getWinners = async (req, res, next) => {
   try {
-    const winners = await User.find()
+    const winners = await User.find({ contentType: "user" })
       .sort({ beans: -1 })
       .select("name beans wins");
     res.json(winners);
