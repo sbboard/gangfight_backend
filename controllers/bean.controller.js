@@ -85,6 +85,9 @@ exports.placeBet = async (req, res, next) => {
     user.beans -= totalCost;
     await user.save();
 
+    // Update the poll pot and add the user to the bettors array
+    poll.pot += totalCost;
+
     // Add user to the bettors array as many times as shares bought
     option.bettors.push(...Array(shares).fill(userId));
     await poll.save();

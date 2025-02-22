@@ -16,7 +16,7 @@ const pollSchema = new Schema({
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
   pricePerShare: { type: Number, default: 1 },
-  pot: { type: Number, default: 5 },
+  pot: { type: Number, default: 2 }, //default is price of creation
   options: [pollOptionSchema],
   abstained: [{ type: String, required: true }], // Store user IDs as strings
   contentType: {
