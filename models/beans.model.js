@@ -30,6 +30,11 @@ const pollSchema = new Schema({
 });
 
 // User Schema
+const inventoryItemSchema = new Schema({
+  name: { type: String, required: true },
+  meta: { type: String, default: "" },
+});
+
 const userSchema = new Schema({
   name: { type: String, required: true },
   displayName: {
@@ -41,8 +46,7 @@ const userSchema = new Schema({
   lastIP: { type: String },
   password: { type: String, required: true },
   role: { type: String, default: "spectator" },
-  inventory: [{ type: String }],
-  probationEndDate: { type: Date, default: null },
+  inventory: [inventoryItemSchema],
   beans: { type: Number, default: 10000000 },
   registrationDate: { type: Date, default: Date.now },
   wins: [{ type: String }], // Store poll IDs as strings
