@@ -15,8 +15,8 @@ const pollSchema = new Schema({
   settleDate: { type: Date, default: null },
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
-  pricePerShare: { type: Number, default: 10 },
-  pot: { type: Number, default: 50 },
+  pricePerShare: { type: Number, default: 1 },
+  pot: { type: Number, default: 5 },
   options: [pollOptionSchema],
   abstained: [{ type: String, required: true }], // Store user IDs as strings
   contentType: {
@@ -41,7 +41,7 @@ const userSchema = new Schema({
   role: { type: String, default: "user" },
   inventory: [{ type: String }],
   probationEndDate: { type: Date, default: null },
-  beans: { type: Number, default: 100 },
+  beans: { type: Number, default: 10 },
   registrationDate: { type: Date, default: Date.now },
   wins: [{ type: String }], // Store poll IDs as strings
   contentType: {

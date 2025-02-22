@@ -5,6 +5,19 @@ exports.createPoll = async (req, res, next) => {
   try {
     const { creatorId, title, description, endDate, options } = req.body;
 
+    // Find the user and deduct 2 beans
+    const user = await User.findById(creatorId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (user.beans < 2) {
+      return res.status(400).json({ message: "Insufficient beans" });
+    }
+
+    user.beans -= 2;
+    await user.save();
+
+    // Create the poll
     const poll = new Poll({ creatorId, title, description, endDate, options });
     await poll.save();
 
