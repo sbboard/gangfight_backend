@@ -3,7 +3,15 @@ const { Poll, User, CREATION_FEE } = require("../models/beans.model.js");
 // Create a new poll
 exports.createPoll = async (req, res, next) => {
   try {
-    const { creatorId, title, description, endDate, options } = req.body;
+    const {
+      creatorId,
+      title,
+      description,
+      endDate,
+      options,
+      pricePerShare,
+      seed,
+    } = req.body;
 
     // Find the user and deduct 2 beans
     const user = await User.findById(creatorId);
@@ -20,8 +28,22 @@ exports.createPoll = async (req, res, next) => {
     user.beans -= CREATION_FEE;
     await user.save();
 
+    if (seed < pricePerShare * 2) {
+      return res
+        .status(400)
+        .json({ message: "Seed must be at least twice the price per share" });
+    }
+
     // Create the poll
-    const poll = new Poll({ creatorId, title, description, endDate, options });
+    const poll = new Poll({
+      creatorId,
+      title,
+      description,
+      endDate,
+      options,
+      pricePerShare,
+      seed,
+    });
     await poll.save();
 
     res.status(201).json({
