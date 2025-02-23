@@ -1,4 +1,4 @@
-const { Poll, User, CREATION_FEE } = require("../models/beans.model.js");
+const { Poll, User } = require("../models/beans.model.js");
 
 // Create a new poll
 exports.createPoll = async (req, res, next) => {
@@ -13,26 +13,26 @@ exports.createPoll = async (req, res, next) => {
       seed,
     } = req.body;
 
+    if (seed < pricePerShare * 2) {
+      return res
+        .status(400)
+        .json({ message: "Seed must be at least twice the price per share" });
+    }
+
     // Find the user and deduct 2 beans
     const user = await User.findById(creatorId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (user.beans < 2) {
+    if (user.beans < seed) {
       return res.status(400).json({ message: "Insufficient beans" });
     }
 
     if (user.role == "spectator" || user.role == "bettor" || !user.role) {
       user.role = "bookie";
     }
-    user.beans -= CREATION_FEE;
+    user.beans -= seed;
     await user.save();
-
-    if (seed < pricePerShare * 2) {
-      return res
-        .status(400)
-        .json({ message: "Seed must be at least twice the price per share" });
-    }
 
     // Create the poll
     const poll = new Poll({
@@ -43,6 +43,7 @@ exports.createPoll = async (req, res, next) => {
       options,
       pricePerShare,
       seed,
+      pot: seed,
     });
     await poll.save();
 
@@ -156,7 +157,7 @@ exports.setPollWinner = async (req, res, next) => {
       { $push: { wins: pollId } }
     );
 
-    // Payout 10% of the jackpot to the poll creator
+    // Payout 15% of the jackpot to the poll creator
     let jackpot = poll.pot;
     const creator = await User.findById(poll.creatorId);
     if (creator) {
