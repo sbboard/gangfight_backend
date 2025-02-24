@@ -47,24 +47,21 @@ router.put("/user/:id", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.updateUser)
 );
 
-// Buy Item Route
+// Store routes
 router.post("/store/buy-item", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.buyItem)
 );
-
-// Sell Item Route
 router.post("/store/sell-item", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.sellItem)
 );
-
-// Remove Invite Route
 router.post("/store/check-invite", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.checkInvite)
 );
-
-// Lottery Route
 router.post("/store/lottery", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.lottery)
+);
+router.post("/store/debt", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.requestDebt)
 );
 
 module.exports = router;

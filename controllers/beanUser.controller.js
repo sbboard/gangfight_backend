@@ -77,16 +77,18 @@ exports.getWinners = async (req, res, next) => {
   try {
     const excludedUsers = [
       new mongoose.Types.ObjectId("67bbdee28094dd05bc218d1d"), // the house
-      new mongoose.Types.ObjectId("67b7d251d82f7305bc9b3425"), //dupe
+      new mongoose.Types.ObjectId("67b7d251d82f7305bc9b3425"), // dupe
     ];
 
     const winners = await User.find({
       contentType: "user",
       _id: { $nin: excludedUsers }, // Exclude specific users
       role: { $ne: "banned" }, // Exclude banned users
-    })
-      .sort({ beans: -1 })
-      .select("name beans wins");
+    }).select("name beans debt wins");
+
+    // Sort by beans - debt in descending order
+    winners.sort((a, b) => b.beans - b.debt - (a.beans - a.debt));
+
     res.json(winners);
   } catch (error) {
     next(error);
@@ -135,6 +137,11 @@ exports.buyItem = async (req, res, next) => {
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.debt > 0)
+      return res
+        .status(400)
+        .json({ message: "You can't buy items while in debt" });
 
     if (user.beans < item.price)
       return res.status(400).json({ message: "Not enough beans" });
@@ -252,6 +259,54 @@ exports.runLottery = async (req, res, next) => {
         user,
       });
     }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Debt Request Controller
+exports.requestDebt = async (req, res, next) => {
+  try {
+    const { userId, amount } = req.body;
+
+    // Find the user by ID
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Ensure the user has less than 1,000,000 beans and no items in their inventory
+    if (user.beans >= 1000000) {
+      return res
+        .status(400)
+        .json({ message: "User has enough beans to not be eligible for debt" });
+    }
+
+    if (user.inventory.length > 0) {
+      return res.status(400).json({
+        message:
+          "User cannot request debt if they have items in their inventory",
+      });
+    }
+
+    if (amount <= 1000000 || amount > 50000000) {
+      return res.status(400).json({
+        message: "Requested amount must be between 1,000,000 and 50,000,000",
+      });
+    }
+
+    // Calculate the debt with the 20% fee
+    const debtWithFee = Math.floor(amount * 1.2); // Adding 20% fee
+
+    // Add the debt and the requested beans to the user's account
+    user.debt += debtWithFee;
+    user.beans += amount;
+
+    // Save the updated user data
+    await user.save();
+
+    res.json({
+      message: `Debt of ${amount} requested successfully. Total debt with 20% fee: ${debtWithFee}`,
+      user,
+    });
   } catch (error) {
     next(error);
   }
