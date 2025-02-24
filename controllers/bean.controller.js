@@ -175,7 +175,7 @@ exports.setPollWinner = async (req, res, next) => {
     let jackpot = poll.pot;
     const creator = await User.findById(poll.creatorId);
     if (creator) {
-      const payout = Math.floor(jackpot * 0.15);
+      const payout = Math.floor(jackpot * 0.05);
       creator.beans += payout;
       await creator.save();
       jackpot -= payout;
