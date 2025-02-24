@@ -1,5 +1,6 @@
 const { User } = require("../models/beans.model.js");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 // Register a new user
 exports.registerUser = async (req, res, next) => {
@@ -74,7 +75,16 @@ exports.getUser = async (req, res, next) => {
 
 exports.getWinners = async (req, res, next) => {
   try {
-    const winners = await User.find({ contentType: "user" })
+    const excludedUsers = [
+      new mongoose.Types.ObjectId("67bbdee28094dd05bc218d1d"), // the house
+      new mongoose.Types.ObjectId("67b7d251d82f7305bc9b3425"), //dupe
+    ];
+
+    const winners = await User.find({
+      contentType: "user",
+      _id: { $nin: excludedUsers }, // Exclude specific users
+      role: { $ne: "banned" }, // Exclude banned users
+    })
       .sort({ beans: -1 })
       .select("name beans wins");
     res.json(winners);

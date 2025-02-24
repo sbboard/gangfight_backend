@@ -24,14 +24,14 @@ exports.createPoll = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (user.beans < seed) {
+    if (user.beans < seed / 2) {
       return res.status(400).json({ message: "Insufficient beans" });
     }
 
     if (user.role == "spectator" || user.role == "bettor" || !user.role) {
       user.role = "bookie";
     }
-    user.beans -= seed;
+    user.beans -= seed / 2;
     await user.save();
 
     // Create the poll

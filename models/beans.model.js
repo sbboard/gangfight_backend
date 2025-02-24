@@ -12,20 +12,23 @@ const pollSchema = new Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   endDate: { type: Date, required: true },
-  settleDate: { type: Date, default: null },
+  settleDate: {
+    type: Date,
+    default: function () {
+      return this.endDate;
+    },
+  },
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
   pricePerShare: { type: Number, default: 1000000 },
   seed: { type: Number, default: 2000000 },
   pot: { type: Number, default: 2000000 },
   options: [pollOptionSchema],
-  abstained: [{ type: String, required: true }], // Store user IDs as strings
   contentType: {
     type: String,
     default: "poll",
     immutable: true,
   },
-  pollType: { type: String, default: "bet" },
 });
 
 // User Schema
@@ -43,8 +46,10 @@ const userSchema = new Schema({
     },
   },
   lastIP: { type: String },
+  debt: { type: Number, default: 0 },
   password: { type: String, required: true },
   role: { type: String, default: "spectator" },
+  punishmentReason: { type: String, default: "" },
   inventory: [inventoryItemSchema],
   beans: { type: Number, default: 10000000 },
   registrationDate: { type: Date, default: Date.now },
