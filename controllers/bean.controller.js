@@ -140,73 +140,74 @@ exports.setPollWinner = async (req, res, next) => {
     // Find the poll by ID
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
-
-    // Check if the option exists within the poll
-    const winningOption = poll.options.find(
-      (option) => option._id.toString() === optionId
-    );
-    if (!winningOption) {
-      return res.status(400).json({ message: "Invalid option ID" });
+    if (poll.winner) {
+      return res.status(400).json({ message: "Winner already set" });
     }
 
-    // Update the poll winner
+    // Find the winning option
+    const winningOption = poll.options.find(
+      (opt) => opt._id.toString() === optionId
+    );
+    if (!winningOption)
+      return res.status(400).json({ message: "Invalid option ID" });
+
+    // Set the winner and save
     poll.winner = optionId;
     await poll.save();
 
-    const totalBettors = new Set(poll.options.flatMap((opt) => opt.bettors))
-      .size;
+    // Calculate total bets and winning bets
+    const totalBettors = poll.options.reduce(
+      (sum, opt) => sum + opt.bettors.length,
+      0
+    );
     const winningBettors = winningOption.bettors.length;
+    console.log(totalBettors, winningBettors);
 
-    // Case 1: If everyone chose correctly, refund their entry fee without recording a win
+    // If everyone won, refund their entry fee and exit
     if (winningBettors === totalBettors) {
-      await Promise.all(
-        winningOption.bettors.map(async (userId) => {
-          const user = await User.findById(userId);
-          if (user) {
-            user.beans += poll.pricePerShare;
-            await user.save();
-          }
-        })
+      await User.updateMany(
+        { _id: { $in: winningOption.bettors } },
+        { $inc: { beans: poll.pricePerShare } }
       );
       return res.json({ message: "All bettors refunded, no winner recorded" });
     }
 
-    // Payout 15% of the jackpot to the poll creator
+    // Payout 5% of the jackpot to the creator
     let jackpot = poll.pot;
     const creator = await User.findById(poll.creatorId);
     if (creator) {
-      const payout = Math.floor(jackpot * 0.05);
-      creator.beans += payout;
+      const creatorPayout = Math.floor(jackpot * 0.05);
+      creator.beans += creatorPayout;
       await creator.save();
-      jackpot -= payout;
+      jackpot -= creatorPayout;
     }
 
-    // Case 2: If no one chose the correct option, give the remaining jackpot to fallback user
+    // If no one won, give the remaining jackpot to fallback user
     if (winningBettors === 0) {
-      const fallbackUser = await User.findById("67bbdee28094dd05bc218d1d");
-      if (fallbackUser) {
-        fallbackUser.beans += jackpot;
-        await fallbackUser.save();
-      }
+      await User.findByIdAndUpdate("67bbdee28094dd05bc218d1d", {
+        $inc: { beans: jackpot },
+      });
       return res.json({
         message: "No correct votes, jackpot given to the house",
       });
     }
 
-    // Case 3: Distribute the jackpot among winning bettors and record their win
-    await User.updateMany(
-      { _id: { $in: winningOption.bettors } },
-      { $push: { wins: pollId } }
-    );
+    // Track total payout per user
+    const userPayouts = new Map();
+    winningOption.bettors.forEach((userId) => {
+      userPayouts.set(
+        userId,
+        (userPayouts.get(userId) || 0) + Math.floor(jackpot / winningBettors)
+      );
+    });
 
-    const payoutPerShare = Math.floor(jackpot / winningBettors);
+    // Process user payouts in batch
     await Promise.all(
-      winningOption.bettors.map(async (userId) => {
-        const user = await User.findById(userId);
-        if (user) {
-          user.beans += payoutPerShare;
-          await user.save();
-        }
+      Array.from(userPayouts.entries()).map(async ([userId, totalPayout]) => {
+        await User.findByIdAndUpdate(userId, {
+          $inc: { beans: totalPayout },
+          $push: { wins: pollId },
+        });
       })
     );
 
