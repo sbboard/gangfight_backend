@@ -8,6 +8,7 @@ exports.createPoll = async (req, res, next) => {
       title,
       description,
       endDate,
+      settleDate,
       options,
       pricePerShare,
       seed,
@@ -40,6 +41,7 @@ exports.createPoll = async (req, res, next) => {
       title,
       description,
       endDate,
+      settleDate,
       options,
       pricePerShare,
       seed,
@@ -147,15 +149,27 @@ exports.setPollWinner = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid option ID" });
     }
 
-    // Update the winner field
+    // Update the poll winner
     poll.winner = optionId;
     await poll.save();
 
-    // Add a win to all users who voted for the winning option
-    await User.updateMany(
-      { _id: { $in: winningOption.bettors } },
-      { $push: { wins: pollId } }
-    );
+    const totalBettors = new Set(poll.options.flatMap((opt) => opt.bettors))
+      .size;
+    const winningBettors = winningOption.bettors.length;
+
+    // Case 1: If everyone chose correctly, refund their entry fee without recording a win
+    if (winningBettors === totalBettors) {
+      await Promise.all(
+        winningOption.bettors.map(async (userId) => {
+          const user = await User.findById(userId);
+          if (user) {
+            user.beans += poll.pricePerShare;
+            await user.save();
+          }
+        })
+      );
+      return res.json({ message: "All bettors refunded, no winner recorded" });
+    }
 
     // Payout 15% of the jackpot to the poll creator
     let jackpot = poll.pot;
@@ -167,31 +181,38 @@ exports.setPollWinner = async (req, res, next) => {
       jackpot -= payout;
     }
 
-    // Calculate individual payouts
-    const totalShares = winningOption.bettors.length;
-    if (totalShares > 0) {
-      const payoutPerShare = Math.floor(jackpot / totalShares);
-
-      // Aggregate shares per user
-      const userShares = {};
-      winningOption.bettors.forEach((userId) => {
-        userShares[userId] = (userShares[userId] || 0) + 1;
+    // Case 2: If no one chose the correct option, give the remaining jackpot to fallback user
+    if (winningBettors === 0) {
+      const fallbackUser = await User.findById("67bbdee28094dd05bc218d1d");
+      if (fallbackUser) {
+        fallbackUser.beans += jackpot;
+        await fallbackUser.save();
+      }
+      return res.json({
+        message: "No correct votes, jackpot given to the house",
       });
+    }
 
-      // Distribute payouts
-      for (const [userId, shares] of Object.entries(userShares)) {
+    // Case 3: Distribute the jackpot among winning bettors and record their win
+    await User.updateMany(
+      { _id: { $in: winningOption.bettors } },
+      { $push: { wins: pollId } }
+    );
+
+    const payoutPerShare = Math.floor(jackpot / winningBettors);
+    await Promise.all(
+      winningOption.bettors.map(async (userId) => {
         const user = await User.findById(userId);
         if (user) {
-          user.beans += payoutPerShare * shares;
+          user.beans += payoutPerShare;
           await user.save();
         }
-      }
-    }
+      })
+    );
 
     res.json({
       message: "Winner set, creator paid, jackpot distributed",
       poll,
-      newBeanAmt: creator.beans,
     });
   } catch (error) {
     next(error);
