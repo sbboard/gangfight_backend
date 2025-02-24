@@ -13,10 +13,10 @@ exports.createPoll = async (req, res, next) => {
       seed,
     } = req.body;
 
-    if (seed < pricePerShare * 2) {
+    if (seed < pricePerShare) {
       return res
         .status(400)
-        .json({ message: "Seed must be at least twice the price per share" });
+        .json({ message: "Seed must be at least the price per share" });
     }
 
     // Find the user and deduct 2 beans
@@ -24,14 +24,14 @@ exports.createPoll = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (user.beans < seed / 2) {
+    if (user.beans < seed) {
       return res.status(400).json({ message: "Insufficient beans" });
     }
 
     if (user.role == "spectator" || user.role == "bettor" || !user.role) {
       user.role = "bookie";
     }
-    user.beans -= seed / 2;
+    user.beans -= seed;
     await user.save();
 
     // Create the poll
@@ -43,7 +43,7 @@ exports.createPoll = async (req, res, next) => {
       options,
       pricePerShare,
       seed,
-      pot: seed,
+      pot: seed * 2,
     });
     await poll.save();
 
