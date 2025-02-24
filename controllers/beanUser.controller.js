@@ -146,9 +146,17 @@ exports.buyItem = async (req, res, next) => {
     if (user.beans < item.price)
       return res.status(400).json({ message: "Not enough beans" });
 
+    const house = await User.findById(HOUSE_ID);
+    if (!house) {
+      return res.status(404).json({ message: "Lottery account not found" });
+    }
+
     user.beans -= item.price;
     user.inventory.push({ name: itemName, meta: item.generateMeta() });
     await user.save();
+
+    house.beans += item.price;
+    await house.save();
 
     res.json({ message: "Item purchased", user });
   } catch (error) {
@@ -233,12 +241,13 @@ exports.runLottery = async (req, res, next) => {
     const isWinner = Math.random() < 1 / LOTTERY_CHANCE;
 
     const house = await User.findById(HOUSE_ID);
-    if (!house)
+    if (!house) {
       return res.status(404).json({ message: "Lottery account not found" });
+    }
 
     if (isWinner) {
       // Give all the beans from the winner's account to the user
-      const winnerBeans = winner.beans;
+      const winnerBeans = house.beans;
       user.beans += winnerBeans;
 
       // Reset the winner's bean count to 0
