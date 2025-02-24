@@ -5,13 +5,34 @@ const mongoose = require("mongoose");
 // Register a new user
 exports.registerUser = async (req, res, next) => {
   try {
-    const { name, password } = req.body;
+    const { name, password, inviteCode } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ name });
     if (existingUser) {
       return res.status(400).json({ message: "Username already taken" });
     }
+
+    let referrer = null;
+    if (!inviteCode) {
+      return res.status(400).json({ message: "Invite code required" });
+    }
+    // Find user with the invite
+    const inviter = await User.findOne({
+      "inventory.name": "invite",
+      "inventory.meta": inviteCode,
+    });
+
+    if (!inviter) {
+      return res.status(404).json({ message: "Invalid invite code" });
+    }
+
+    // Remove invite from inviter's inventory
+    inviter.inventory = inviter.inventory.filter(
+      (item) => !(item.name === "invite" && item.meta === inviteCode)
+    );
+    await inviter.save();
+    referrer = inviter._id;
 
     // Hash the password using crypto
     const hashedPassword = crypto
@@ -24,13 +45,11 @@ exports.registerUser = async (req, res, next) => {
       name,
       password: hashedPassword,
       wins: [],
+      referrer,
     });
 
     await user.save();
-    res.status(201).json({
-      message: "User registered successfully",
-      user,
-    });
+    res.status(201).json({ message: "User registered successfully", user });
   } catch (error) {
     next(error);
   }
@@ -189,35 +208,6 @@ exports.sellItem = async (req, res, next) => {
   }
 };
 
-exports.checkInvite = async (req, res, next) => {
-  try {
-    const { code } = req.body;
-
-    const users = await User.find({
-      "inventory.name": "invite",
-      "inventory.meta": code,
-    });
-
-    if (users.length === 0)
-      return res
-        .status(404)
-        .json({ message: "No invite found with this code" });
-
-    await Promise.all(
-      users.map(async (user) => {
-        user.inventory = user.inventory.filter(
-          (item) => !(item.name === "invite" && item.meta === code)
-        );
-        await user.save();
-      })
-    );
-
-    res.json({ message: "Invite removed from all users" });
-  } catch (error) {
-    next(error);
-  }
-};
-
 const LOTTERY_CHANCE = 10000; // The slim chance (1 in LOTTERY_CHANCE)
 const HOUSE_ID = "67bbdee28094dd05bc218d1d";
 
@@ -296,7 +286,7 @@ exports.requestDebt = async (req, res, next) => {
       });
     }
 
-    if (amount <= 1000000 || amount > 50000000) {
+    if (amount <= 500000 || amount > 50000000) {
       return res.status(400).json({
         message: "Requested amount must be between 1,000,000 and 50,000,000",
       });

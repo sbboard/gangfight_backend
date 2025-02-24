@@ -20,9 +20,9 @@ const pollSchema = new Schema({
   },
   winner: { type: String, default: null },
   creationDate: { type: Date, default: Date.now },
-  pricePerShare: { type: Number, default: 1000000 },
-  seed: { type: Number, default: 2000000 },
-  pot: { type: Number, default: 2000000 },
+  pricePerShare: { type: Number, default: 500000 },
+  seed: { type: Number, default: 1000000 },
+  pot: { type: Number, default: 1000000 },
   options: [pollOptionSchema],
   contentType: {
     type: String,
@@ -54,6 +54,7 @@ const userSchema = new Schema({
   beans: { type: Number, default: 10000000 },
   registrationDate: { type: Date, default: Date.now },
   wins: [{ type: String }], // Store poll IDs as strings
+  referrer: { type: String, default: null },
   contentType: {
     type: String,
     default: "user",
