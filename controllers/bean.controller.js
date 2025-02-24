@@ -44,7 +44,7 @@ exports.createPoll = async (req, res, next) => {
       settleDate,
       options,
       pricePerShare,
-      seed,
+      seed: seed * 2,
       pot: seed * 2,
     });
     await poll.save();
