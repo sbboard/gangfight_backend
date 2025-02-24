@@ -148,6 +148,23 @@ const ITEMS = {
   adblock: { price: 5000000, generateMeta: () => "" },
 };
 
+const generateUniqueInviteCode = async () => {
+  let code;
+  let isDuplicate = true;
+
+  while (isDuplicate) {
+    code = ITEMS.invite.generateMeta();
+    const existingInvite = await User.findOne({
+      "inventory.name": "invite",
+      "inventory.meta": code,
+    });
+
+    if (!existingInvite) isDuplicate = false;
+  }
+
+  return code;
+};
+
 exports.buyItem = async (req, res, next) => {
   try {
     const { userId, itemName } = req.body;
@@ -170,8 +187,15 @@ exports.buyItem = async (req, res, next) => {
       return res.status(404).json({ message: "Lottery account not found" });
     }
 
+    let meta = "";
+    if (itemName.toLowerCase() === "invite") {
+      meta = await generateUniqueInviteCode();
+    } else {
+      meta = item.generateMeta();
+    }
+
     user.beans -= item.price;
-    user.inventory.push({ name: itemName, meta: item.generateMeta() });
+    user.inventory.push({ name: itemName, meta });
     await user.save();
 
     house.beans += item.price;
