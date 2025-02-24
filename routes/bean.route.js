@@ -47,4 +47,24 @@ router.put("/user/:id", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.updateUser)
 );
 
+// Buy Item Route
+router.post("/store/buy-item", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.buyItem)
+);
+
+// Sell Item Route
+router.post("/store/sell-item", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.sellItem)
+);
+
+// Remove Invite Route
+router.post("/store/check-invite", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.checkInvite)
+);
+
+// Lottery Route
+router.post("/store/lottery", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.lottery)
+);
+
 module.exports = router;
