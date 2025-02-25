@@ -62,8 +62,28 @@ exports.createPoll = async (req, res, next) => {
 // Get all polls
 exports.getAllPolls = async (req, res, next) => {
   try {
-    const polls = await Poll.find({ contentType: "poll" }).sort("endDate");
-    res.json(polls);
+    const polls = await Poll.find({ contentType: "poll" })
+      .sort("endDate")
+      .lean();
+
+    // Fetch all unique creator IDs
+    const creatorIds = [...new Set(polls.map((poll) => poll.creatorId))];
+
+    // Fetch user details for all creators
+    const users = await User.find({ _id: { $in: creatorIds } })
+      .select("name displayName")
+      .lean();
+    const userMap = Object.fromEntries(
+      users.map((user) => [user._id.toString(), user.displayName || user.name])
+    );
+
+    // Attach creator names to polls
+    const pollsWithCreators = polls.map((poll) => ({
+      ...poll,
+      creatorName: userMap[poll.creatorId],
+    }));
+
+    res.json(pollsWithCreators);
   } catch (error) {
     next(error);
   }
