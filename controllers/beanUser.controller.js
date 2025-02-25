@@ -83,7 +83,9 @@ exports.loginUser = async (req, res, next) => {
 // Get user details
 exports.getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select("-password");
+    const user = await User.findById(req.params.id).select(
+      "-password -lastIP -punishmentReason -inventory -registrationDate -referrer"
+    );
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json(user);
@@ -140,11 +142,11 @@ exports.updateUser = async (req, res, next) => {
 
 const ITEMS = {
   invite: {
-    price: 25000000,
+    price: 20000000,
     generateMeta: () =>
       Math.random().toString(36).substring(2, 7).toUpperCase(),
   },
-  "bookie license": { price: 10000000, generateMeta: () => "" },
+  "bookie license": { price: 15000000, generateMeta: () => "" },
   adblock: { price: 5000000, generateMeta: () => "" },
 };
 
@@ -237,18 +239,19 @@ const HOUSE_ID = "67bbdee28094dd05bc218d1d";
 
 exports.runLottery = async (req, res, next) => {
   try {
+    const LOTTO_PRICE = 10000;
     const { userId } = req.body;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Deduct 1 bean from the user's account
-    if (user.beans < 1)
+    if (user.beans < LOTTO_PRICE)
       return res
         .status(400)
         .json({ message: "Not enough beans to participate" });
 
-    user.beans -= 1;
+    user.beans -= LOTTO_PRICE;
     await user.save();
 
     // Find the lottery "lucky" winner condition
@@ -273,7 +276,7 @@ exports.runLottery = async (req, res, next) => {
       res.json({ message: "Congratulations! You won all the beans", user });
     } else {
       // Give the winner 1 bean from the user
-      house.beans += 1;
+      house.beans += LOTTO_PRICE;
       await house.save();
 
       res.json({
@@ -297,7 +300,7 @@ exports.requestDebt = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Ensure the user has less than 1,000,000 beans and no items in their inventory
-    if (user.beans >= 1000000) {
+    if (user.beans >= 500000) {
       return res
         .status(400)
         .json({ message: "User has enough beans to not be eligible for debt" });
