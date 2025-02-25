@@ -208,6 +208,7 @@ exports.setPollWinner = async (req, res, next) => {
       });
       return res.json({
         message: "No correct votes, jackpot given to the house",
+        user: creator,
       });
     }
 
