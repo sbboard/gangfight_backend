@@ -231,10 +231,13 @@ exports.setPollWinner = async (req, res, next) => {
       })
     );
 
+    // Re-fetch user data to include updated bean amount and wins
+    const updatedCreator = await User.findById(creator._id);
+
     res.json({
       message: "Winner set, creator paid, jackpot distributed",
       poll,
-      user: creator,
+      user: updatedCreator,
     });
   } catch (error) {
     next(error);
