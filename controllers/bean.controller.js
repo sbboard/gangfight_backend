@@ -233,6 +233,7 @@ exports.setPollWinner = async (req, res, next) => {
     res.json({
       message: "Winner set, creator paid, jackpot distributed",
       poll,
+      user: creator,
     });
   } catch (error) {
     next(error);
