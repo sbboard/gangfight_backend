@@ -137,11 +137,11 @@ exports.setPollWinner = async (req, res, next) => {
   try {
     const { pollId, optionId } = req.body;
 
-    // Find the poll by ID
     const poll = await Poll.findById(pollId);
-    if (!poll) return res.status(404).json({ message: "Poll not found" });
-    if (poll.winner) {
-      return res.status(400).json({ message: "Winner already set" });
+    if (!poll || poll.winner) {
+      return res
+        .status(poll ? 400 : 404)
+        .json({ message: poll ? "Winner already set" : "Poll not found" });
     }
 
     // Find the winning option
@@ -161,7 +161,6 @@ exports.setPollWinner = async (req, res, next) => {
       0
     );
     const winningBettors = winningOption.bettors.length;
-    console.log(totalBettors, winningBettors);
 
     // If everyone won, refund their entry fee and exit
     if (winningBettors === totalBettors) {
