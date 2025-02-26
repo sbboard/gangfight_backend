@@ -146,8 +146,8 @@ const ITEMS = {
     generateMeta: () =>
       Math.random().toString(36).substring(2, 7).toUpperCase(),
   },
-  "bookie license": { price: 15000000, generateMeta: () => "" },
-  adblock: { price: 5000000, generateMeta: () => "" },
+  "bookie license": { price: 11000000, generateMeta: () => "" },
+  adblock: { price: 1000000, generateMeta: () => "" },
 };
 
 const generateUniqueInviteCode = async () => {
@@ -245,7 +245,7 @@ exports.runLottery = async (req, res, next) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Deduct 1 bean from the user's account
+    // Deduct beans for lottery participation
     if (user.beans < LOTTO_PRICE)
       return res
         .status(400)
@@ -254,37 +254,36 @@ exports.runLottery = async (req, res, next) => {
     user.beans -= LOTTO_PRICE;
     await user.save();
 
-    // Find the lottery "lucky" winner condition
     const isWinner = Math.random() < 1 / LOTTERY_CHANCE;
 
-    const house = await User.findById(HOUSE_ID);
+    let house = await User.findById(HOUSE_ID);
     if (!house) {
       return res.status(404).json({ message: "Lottery account not found" });
     }
 
-    if (isWinner) {
-      // Give all the beans from the winner's account to the user
-      const winnerBeans = house.beans;
-      user.beans += winnerBeans;
+    let message;
+    let wonBeans = 0;
 
-      // Reset the winner's bean count to 0
+    if (isWinner) {
+      wonBeans = house.beans;
+      user.beans += wonBeans;
       house.beans = 0;
       await house.save();
-
       await user.save();
-
-      res.json({ message: "Congratulations! You won all the beans", user });
+      message = `Congratulations! You won ${wonBeans} beans!`;
     } else {
-      // Give the winner 1 bean from the user
       house.beans += LOTTO_PRICE;
       await house.save();
-
-      res.json({
-        message:
-          "Better luck next time! Your 1 bean went to the lottery account.",
-        user,
-      });
+      message = "Better luck next time!";
     }
+
+    house = await User.findById(HOUSE_ID);
+
+    res.json({
+      message,
+      user,
+      houseBeans: house.beans,
+    });
   } catch (error) {
     next(error);
   }
