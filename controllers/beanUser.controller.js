@@ -289,7 +289,7 @@ exports.requestDebt = async (req, res, next) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     // Ensure the user has less than 1,000,000 beans and no items in their inventory
-    if (user.beans >= 500000) {
+    if (user.beans >= 2000000) {
       return res
         .status(400)
         .json({ message: "User has enough beans to not be eligible for debt" });
