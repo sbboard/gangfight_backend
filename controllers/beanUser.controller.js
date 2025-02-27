@@ -184,11 +184,6 @@ exports.buyItem = async (req, res, next) => {
     if (user.beans < item.price)
       return res.status(400).json({ message: "Not enough beans" });
 
-    const house = await User.findById(HOUSE_ID);
-    if (!house) {
-      return res.status(404).json({ message: "Lottery account not found" });
-    }
-
     let meta = "";
     if (itemName.toLowerCase() === "invite") {
       meta = await generateUniqueInviteCode();
@@ -200,11 +195,7 @@ exports.buyItem = async (req, res, next) => {
     user.inventory.push({ name: itemName, meta });
     await user.save();
 
-    house.beans += item.price;
-    await house.save();
-
-    house = await User.findById(HOUSE_ID);
-    res.json({ message: "Item purchased", user, houseBeans: house.beans });
+    res.json({ message: "Item purchased", user });
   } catch (error) {
     next(error);
   }
@@ -229,22 +220,14 @@ exports.sellItem = async (req, res, next) => {
     user.beans += Math.floor(item.price / 2);
     await user.save();
 
-    const house = await User.findById(HOUSE_ID);
-    if (!house) {
-      return res.status(404).json({ message: "Lottery account not found" });
-    }
-    house.beans -= Math.floor(item.price / 2);
-    await house.save();
-
     res.json({ message: "Item sold", user });
   } catch (error) {
     next(error);
   }
 };
 
-const HOUSE_ID = "67bbdee28094dd05bc218d1d";
-
 exports.runLottery = async (req, res, next) => {
+  const HOUSE_ID = "67bbdee28094dd05bc218d1d";
   try {
     const LOTTO_PRICE = 10000;
     const { userId } = req.body;
@@ -274,7 +257,7 @@ exports.runLottery = async (req, res, next) => {
     if (isWinner) {
       wonBeans = house.beans;
       user.beans += wonBeans;
-      house.beans = 0;
+      house.beans = 10000000;
       await house.save();
       await user.save();
       message = `Congratulations! You won ${wonBeans} beans!`;
