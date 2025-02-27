@@ -203,7 +203,8 @@ exports.buyItem = async (req, res, next) => {
     house.beans += item.price;
     await house.save();
 
-    res.json({ message: "Item purchased", user });
+    house = await User.findById(HOUSE_ID);
+    res.json({ message: "Item purchased", user, houseBeans: house.beans });
   } catch (error) {
     next(error);
   }
@@ -228,13 +229,19 @@ exports.sellItem = async (req, res, next) => {
     user.beans += Math.floor(item.price / 2);
     await user.save();
 
+    const house = await User.findById(HOUSE_ID);
+    if (!house) {
+      return res.status(404).json({ message: "Lottery account not found" });
+    }
+    house.beans -= Math.floor(item.price / 2);
+    await house.save();
+
     res.json({ message: "Item sold", user });
   } catch (error) {
     next(error);
   }
 };
 
-const LOTTERY_CHANCE = 10000; // The slim chance (1 in LOTTERY_CHANCE)
 const HOUSE_ID = "67bbdee28094dd05bc218d1d";
 
 exports.runLottery = async (req, res, next) => {
@@ -254,7 +261,7 @@ exports.runLottery = async (req, res, next) => {
     user.beans -= LOTTO_PRICE;
     await user.save();
 
-    const isWinner = Math.random() < 1 / LOTTERY_CHANCE;
+    const isWinner = Math.random() < 1 / 10000;
 
     let house = await User.findById(HOUSE_ID);
     if (!house) {
@@ -312,9 +319,9 @@ exports.requestDebt = async (req, res, next) => {
       });
     }
 
-    if (amount <= 500000 || amount > 50000000) {
+    if (amount < 2000000 || amount > 50000000) {
       return res.status(400).json({
-        message: "Requested amount must be between 1,000,000 and 50,000,000",
+        message: "Requested amount must be between 2,000,000 and 50,000,000",
       });
     }
 
@@ -330,6 +337,46 @@ exports.requestDebt = async (req, res, next) => {
 
     res.json({
       message: `Debt of ${amount} requested successfully. Total debt with 20% fee: ${debtWithFee}`,
+      user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Debt Payment Controller
+exports.payOffDebt = async (req, res, next) => {
+  try {
+    const { userId, amount } = req.body;
+
+    // Find the user by ID
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Check if the user has any debt
+    if (user.debt <= 0) {
+      return res.status(400).json({ message: "User has no debt to pay off" });
+    }
+
+    // Ensure the user has enough beans to pay off the debt
+    if (user.beans < amount) {
+      return res
+        .status(400)
+        .json({ message: "Not enough beans to pay off the debt" });
+    }
+
+    // Calculate the amount to pay off, ensuring it doesn't exceed the user's debt
+    const payAmount = Math.min(amount, user.debt);
+
+    // Deduct the payment from the user's beans
+    user.beans -= payAmount;
+    user.debt -= payAmount;
+
+    // Save the updated user data
+    await user.save();
+
+    res.json({
+      message: `Successfully paid off ${payAmount} of the debt. Remaining debt: ${user.debt}`,
       user,
     });
   } catch (error) {

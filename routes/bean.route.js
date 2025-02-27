@@ -58,10 +58,13 @@ router.post("/store/check-invite", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.checkInvite)
 );
 router.post("/store/lottery", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.lottery)
+  handleRequest(req, res, next, "users", userController.runLottery)
 );
 router.post("/store/debt", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.requestDebt)
+);
+router.post("/store/pay-debt", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.payOffDebt)
 );
 
 module.exports = router;
