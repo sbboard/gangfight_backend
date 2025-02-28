@@ -22,24 +22,28 @@ app.use((req, res, next) => {
 
 app.use(function (req, res, next) {
   const allowedDomains = [
-    "bigbean.bet", // non-www
-    "www.bigbean.bet", // www version
-    "gang-fight.com", // non-www
-    "www.gang-fight.com", // www version
+    "bigbean.bet",
+    "www.bigbean.bet",
+    "gang-fight.com",
+    "www.gang-fight.com",
   ];
 
   const origin = req.headers.origin;
+  const host = req.headers.host.split(":")[0]; // Get the host part of the domain
 
-  // Check if the origin is in the allowed domains
-  if (origin && allowedDomains.includes(new URL(origin).hostname)) {
-    res.setHeader("Access-Control-Allow-Origin", origin); // Allow the exact origin
+  if (!origin || origin === `https://${host}`) {
+    res.setHeader("Access-Control-Allow-Origin", "*"); // Or allow specific host `res.setHeader("Access-Control-Allow-Origin", `https://${host}`)`
   } else {
-    return res
-      .status(403)
-      .json({ message: `Forbidden: Invalid origin (${origin})` });
+    if (allowedDomains.includes(new URL(origin).hostname)) {
+      res.setHeader("Access-Control-Allow-Origin", origin); // Allow the exact origin
+    } else {
+      return res
+        .status(403)
+        .json({ message: `Forbidden: Invalid origin (${origin})` });
+    }
   }
 
-  // Set the other CORS headers
+  // Set other CORS headers
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
@@ -55,7 +59,6 @@ app.use(function (req, res, next) {
     return res.status(200).end(); // Respond to preflight request
   }
 
-  // Continue to the next middleware
   next();
 });
 
