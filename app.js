@@ -21,7 +21,15 @@ app.use((req, res, next) => {
 });
 
 app.use(function (req, res, next) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const allowedOrigins = ["https://bigbean.bet", "https://gang-fight.com"];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "none"); // Disallow other origins
+  }
+
   res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
