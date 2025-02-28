@@ -21,23 +21,26 @@ app.use((req, res, next) => {
 });
 
 app.use(function (req, res, next) {
-  const allowedBaseDomains = ["bigbean.bet", "gang-fight.com"];
+  const allowedDomains = [
+    "bigbean.bet", // non-www
+    "www.bigbean.bet", // www version
+    "gang-fight.com", // non-www
+    "www.gang-fight.com", // www version
+  ];
 
   const origin = req.headers.origin;
   if (origin) {
     const parsedOrigin = new URL(origin);
-    const originHost = parsedOrigin.hostname.replace(/^www\./, "");
-
-    if (!allowedBaseDomains.includes(originHost)) {
+    const normalizedOrigin = parsedOrigin.hostname.replace(/^www\./, "");
+    if (!allowedDomains.includes(normalizedOrigin)) {
       return res
         .status(403)
-        .json({ message: `Forbidden: Invalid origin (${originHost})` });
+        .json({ message: `Forbidden: Invalid origin (${origin})` });
     }
   }
 
-  // Get the 'Host' header and validate it
-  const host = req.headers.host.split(":")[0]; // Remove port number (if any)
-  if (!allowedBaseDomains.includes(host.replace(/^www\./, ""))) {
+  const host = req.headers.host.split(":")[0].replace(/^www\./, "");
+  if (!allowedDomains.includes(host)) {
     return res
       .status(403)
       .json({ message: `Forbidden: Invalid host (${host})` });
