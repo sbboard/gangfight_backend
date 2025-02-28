@@ -21,28 +21,39 @@ app.use((req, res, next) => {
 });
 
 app.use(function (req, res, next) {
+  // Allowed base domains (without the 'www.' prefix)
   const allowedBaseDomains = ["bigbean.bet", "gang-fight.com"];
+
+  // Get the 'Origin' header and normalize it by stripping 'www.'
   const origin = req.headers.origin;
-  const parsedOrigin = new URL(origin); // Parse the origin to get the host part
-  const originHost = parsedOrigin.hostname.replace(/^www\./, ""); // Normalize host
+  if (!origin) {
+    return res.status(403).json({ message: "Forbidden: No origin header" });
+  }
+  const parsedOrigin = new URL(origin);
+  const originHost = parsedOrigin.hostname.replace(/^www\./, "");
 
+  // Validate the 'Origin' header
   if (!allowedBaseDomains.includes(originHost)) {
-    return res.status(403).json({ message: "Forbidden: Invalid origin" });
+    return res
+      .status(403)
+      .json({ message: `Forbidden: Invalid origin (${originHost})` });
   }
 
-  const host = req.headers.host.split(":")[0];
-  if (!allowedBaseDomains.includes(host.replace(/^www\./, ""))) {
-    return res.status(403).json({ message: "Forbidden: Invalid host" });
-  }
-
-  res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
+  // Set the correct CORS headers
+  res.setHeader("Access-Control-Allow-Origin", origin); // Allow the exact origin
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Access-Control-Allow-Headers, Access-Control-Allow-Origin, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization"
   );
-  if (req.method === "OPTIONS") return res.status(200).end();
+
+  // If the request is an OPTIONS request (preflight), respond with a 200 status
+  if (req.method === "OPTIONS") {
+    return res.status(200).end(); // Respond successfully to preflight
+  }
+
+  // Continue to the next middleware
   return next();
 });
 
