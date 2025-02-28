@@ -295,6 +295,10 @@ exports.requestDebt = async (req, res, next) => {
         .json({ message: "User has enough beans to not be eligible for debt" });
     }
 
+    if (user.debt > 0) {
+      return res.status(400).json({ message: "User already has a debt" });
+    }
+
     if (user.inventory.length > 0) {
       return res.status(400).json({
         message:

@@ -243,15 +243,3 @@ exports.setPollWinner = async (req, res, next) => {
     next(error);
   }
 };
-
-// Delete a poll
-exports.deletePoll = async (req, res, next) => {
-  try {
-    const deletedPoll = await Poll.findByIdAndDelete(req.params.id);
-    if (!deletedPoll)
-      return res.status(404).json({ message: "Poll not found" });
-    res.json({ message: "Poll deleted successfully" });
-  } catch (error) {
-    next(error);
-  }
-};

@@ -20,9 +20,6 @@ router.post("/polls/set-winner", (req, res, next) =>
 router.post("/polls/bet", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.placeBet)
 );
-router.delete("/polls/:id/delete", (req, res, next) =>
-  handleRequest(req, res, next, "polls", pollController.deletePoll)
-);
 router.get("/polls/:id", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.getPollById)
 );
