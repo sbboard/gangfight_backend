@@ -21,22 +21,26 @@ app.use((req, res, next) => {
 });
 
 app.use(function (req, res, next) {
-  // Allowed base domains (without the 'www.' prefix)
   const allowedBaseDomains = ["bigbean.bet", "gang-fight.com"];
 
-  // Get the 'Origin' header and normalize it by stripping 'www.'
   const origin = req.headers.origin;
-  if (!origin) {
-    return res.status(403).json({ message: "Forbidden: No origin header" });
-  }
-  const parsedOrigin = new URL(origin);
-  const originHost = parsedOrigin.hostname.replace(/^www\./, "");
+  if (origin) {
+    const parsedOrigin = new URL(origin);
+    const originHost = parsedOrigin.hostname.replace(/^www\./, "");
 
-  // Validate the 'Origin' header
-  if (!allowedBaseDomains.includes(originHost)) {
+    if (!allowedBaseDomains.includes(originHost)) {
+      return res
+        .status(403)
+        .json({ message: `Forbidden: Invalid origin (${originHost})` });
+    }
+  }
+
+  // Get the 'Host' header and validate it
+  const host = req.headers.host.split(":")[0]; // Remove port number (if any)
+  if (!allowedBaseDomains.includes(host.replace(/^www\./, ""))) {
     return res
       .status(403)
-      .json({ message: `Forbidden: Invalid origin (${originHost})` });
+      .json({ message: `Forbidden: Invalid host (${host})` });
   }
 
   // Set the correct CORS headers
