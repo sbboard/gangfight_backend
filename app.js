@@ -29,25 +29,17 @@ app.use(function (req, res, next) {
   ];
 
   const origin = req.headers.origin;
-  if (origin) {
-    const parsedOrigin = new URL(origin);
-    const normalizedOrigin = parsedOrigin.hostname.replace(/^www\./, "");
-    if (!allowedDomains.includes(normalizedOrigin)) {
-      return res
-        .status(403)
-        .json({ message: `Forbidden: Invalid origin (${origin})` });
-    }
-  }
 
-  const host = req.headers.host.split(":")[0].replace(/^www\./, "");
-  if (!allowedDomains.includes(host)) {
+  // Check if the origin is in the allowed domains
+  if (origin && allowedDomains.includes(new URL(origin).hostname)) {
+    res.setHeader("Access-Control-Allow-Origin", origin); // Allow the exact origin
+  } else {
     return res
       .status(403)
-      .json({ message: `Forbidden: Invalid host (${host})` });
+      .json({ message: `Forbidden: Invalid origin (${origin})` });
   }
 
-  // Set the correct CORS headers
-  res.setHeader("Access-Control-Allow-Origin", origin); // Allow the exact origin
+  // Set the other CORS headers
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
@@ -55,13 +47,16 @@ app.use(function (req, res, next) {
     "Access-Control-Allow-Headers, Access-Control-Allow-Origin, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization"
   );
 
-  // If the request is an OPTIONS request (preflight), respond with a 200 status
+  // Disable Referrer-Policy (or set to no-referrer)
+  res.setHeader("Referrer-Policy", "no-referrer"); // Disables sending referrer
+
+  // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
-    return res.status(200).end(); // Respond successfully to preflight
+    return res.status(200).end(); // Respond to preflight request
   }
 
   // Continue to the next middleware
-  return next();
+  next();
 });
 
 app.use(fileUpload());
