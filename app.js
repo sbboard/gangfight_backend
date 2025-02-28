@@ -21,15 +21,21 @@ app.use((req, res, next) => {
 });
 
 app.use(function (req, res, next) {
-  const allowedOrigins = ["https://bigbean.bet", "https://gang-fight.com"];
+  const allowedBaseDomains = ["bigbean.bet", "gang-fight.com"];
   const origin = req.headers.origin;
+  const parsedOrigin = new URL(origin); // Parse the origin to get the host part
+  const originHost = parsedOrigin.hostname.replace(/^www\./, ""); // Normalize host
 
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  } else {
-    res.setHeader("Access-Control-Allow-Origin", "none"); // Disallow other origins
+  if (!allowedBaseDomains.includes(originHost)) {
+    return res.status(403).json({ message: "Forbidden: Invalid origin" });
   }
 
+  const host = req.headers.host.split(":")[0];
+  if (!allowedBaseDomains.includes(host.replace(/^www\./, ""))) {
+    return res.status(403).json({ message: "Forbidden: Invalid host" });
+  }
+
+  res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader(
