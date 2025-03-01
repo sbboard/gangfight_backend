@@ -1,4 +1,5 @@
 const { Poll, User } = require("../models/beans.model.js");
+const sanitizePoll = require("../utils/sanitizePoll.js");
 
 // Create a new poll
 exports.createPoll = async (req, res, next) => {
@@ -51,7 +52,6 @@ exports.createPoll = async (req, res, next) => {
 
     res.status(201).json({
       message: "Poll created successfully",
-      poll,
       newBeanAmt: user.beans,
     });
   } catch (error) {
@@ -62,40 +62,28 @@ exports.createPoll = async (req, res, next) => {
 // Get all polls
 exports.getAllPolls = async (req, res, next) => {
   try {
+    const { userId } = req.body;
     const polls = await Poll.find({ contentType: "poll" })
       .sort("endDate")
       .lean();
 
-    // Fetch all unique creator IDs
-    const creatorIds = [...new Set(polls.map((poll) => poll.creatorId))];
+    const cleanedPolls = polls.map((poll) => sanitizePoll(poll, userId));
 
-    // Fetch user details for all creators
-    const users = await User.find({ _id: { $in: creatorIds } })
-      .select("name displayName")
-      .lean();
-    const userMap = Object.fromEntries(
-      users.map((user) => [user._id.toString(), user.displayName || user.name])
-    );
-
-    // Attach creator names to polls
-    const pollsWithCreators = polls.map((poll) => ({
-      ...poll,
-      creatorName: userMap[poll.creatorId],
-    }));
-
-    res.json(pollsWithCreators);
+    res.json(cleanedPolls);
   } catch (error) {
     next(error);
   }
 };
 
 // Get a specific poll by ID
+//IS THIS EVER USED?
 exports.getPollById = async (req, res, next) => {
   try {
-    const poll = await Poll.findById(req.params.id);
+    const { userId, pollId } = req.body;
+    const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    res.json(poll);
+    res.json(sanitizePoll(poll, userId));
   } catch (error) {
     next(error);
   }
@@ -144,7 +132,7 @@ exports.placeBet = async (req, res, next) => {
 
     res.json({
       message: "Bet placed successfully",
-      poll,
+      poll: sanitizePoll(poll, userId),
       newBeanAmt: user.beans,
     });
   } catch (error) {
@@ -236,8 +224,7 @@ exports.setPollWinner = async (req, res, next) => {
 
     res.json({
       message: "Winner set, creator paid, jackpot distributed",
-      poll,
-      user: updatedCreator,
+      user: sanitizeUser(updatedCreator),
     });
   } catch (error) {
     next(error);
