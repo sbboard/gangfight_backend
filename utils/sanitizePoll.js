@@ -3,7 +3,7 @@ const sanitizePoll = async (poll, requestingUserId) => {
 
   const sanitizedPoll = poll.toObject ? poll.toObject() : { ...poll };
 
-  const User = require("../models/beans.model"); // Adjust path as needed
+  const { User } = require("../models/beans.model");
   const creator = await User.findById(sanitizedPoll.creatorId)
     .select("name")
     .lean();

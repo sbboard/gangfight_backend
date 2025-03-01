@@ -62,12 +62,14 @@ exports.createPoll = async (req, res, next) => {
 // Get all polls
 exports.getAllPolls = async (req, res, next) => {
   try {
-    const { userId } = req.body;
+    const { userId } = req.query;
     const polls = await Poll.find({ contentType: "poll" })
       .sort("endDate")
       .lean();
 
-    const cleanedPolls = polls.map((poll) => sanitizePoll(poll, userId));
+    const cleanedPolls = await Promise.all(
+      polls.map((poll) => sanitizePoll(poll, userId))
+    );
 
     res.json(cleanedPolls);
   } catch (error) {
@@ -76,7 +78,6 @@ exports.getAllPolls = async (req, res, next) => {
 };
 
 // Get a specific poll by ID
-//IS THIS EVER USED?
 exports.getPollById = async (req, res, next) => {
   try {
     const { userId, pollId } = req.body;

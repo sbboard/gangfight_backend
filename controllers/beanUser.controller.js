@@ -265,7 +265,7 @@ exports.runLottery = async (req, res, next) => {
     user.beans -= LOTTO_PRICE;
     await user.save();
 
-    const isWinner = Math.random() < 1 / 10000;
+    const isWinner = Math.random() < 1 / 100000;
 
     let house = await User.findById(HOUSE_ID);
     if (!house) {
