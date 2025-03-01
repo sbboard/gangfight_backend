@@ -49,7 +49,6 @@ const userSchema = new Schema({
   debt: { type: Number, default: 0 },
   password: { type: String, required: true },
   role: { type: String, default: "spectator" },
-  punishmentReason: { type: String, default: "" },
   inventory: [inventoryItemSchema],
   beans: { type: Number, default: 10000000 },
   registrationDate: { type: Date, default: Date.now },
