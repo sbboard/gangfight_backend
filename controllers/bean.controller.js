@@ -81,6 +81,10 @@ exports.getAllPolls = async (req, res, next) => {
 exports.getPollById = async (req, res, next) => {
   try {
     const { userId, pollId } = req.body;
+
+    if (!pollId) return res.status(400).json({ message: "Poll ID required" });
+    if (!userId) return res.status(400).json({ message: "User ID required" });
+
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
@@ -196,9 +200,7 @@ exports.setPollWinner = async (req, res, next) => {
 
     // If no one won, give the remaining jackpot to fallback user
     if (winningBettors === 0) {
-      await User.findByIdAndUpdate("67bbdee28094dd05bc218d1d", {
-        $inc: { beans: jackpot },
-      });
+      await User.findByIdAndUpdate(HOUSE_ID, { $inc: { beans: jackpot } });
       return res.json({
         message: "No correct votes, jackpot given to the house",
         user: creator,

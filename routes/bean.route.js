@@ -57,6 +57,9 @@ router.post("/store/check-invite", (req, res, next) =>
 router.post("/store/lottery", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.runLottery)
 );
+router.get("/store/get-jackpot", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.getJackpot)
+);
 router.post("/store/debt", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.requestDebt)
 );
