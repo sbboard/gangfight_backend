@@ -103,6 +103,10 @@ exports.placeBet = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid option ID" });
     }
 
+    if (poll.endDate < Date.now()) {
+      return res.status(400).json({ message: "Poll has ended" });
+    }
+
     // Validate shares
     if (!shares || shares < 1) {
       return res.status(400).json({ message: "Invalid number of shares" });
