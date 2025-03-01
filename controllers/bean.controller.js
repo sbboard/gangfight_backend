@@ -80,7 +80,8 @@ exports.getAllPolls = async (req, res, next) => {
 // Get a specific poll by ID
 exports.getPollById = async (req, res, next) => {
   try {
-    const { userId, pollId } = req.body;
+    const { userId } = req.query;
+    const { pollId } = req.params;
 
     if (!pollId) return res.status(400).json({ message: "Poll ID required" });
     if (!userId) return res.status(400).json({ message: "User ID required" });

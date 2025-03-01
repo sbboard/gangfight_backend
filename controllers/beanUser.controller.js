@@ -88,7 +88,7 @@ exports.loginUser = async (req, res, next) => {
 exports.getUser = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id).select(
-      "-password -lastIP -punishmentReason -registrationDate -referrer"
+      "-password -punishmentReason -registrationDate -referrer"
     );
     if (!user) return res.status(404).json({ message: "User not found" });
 

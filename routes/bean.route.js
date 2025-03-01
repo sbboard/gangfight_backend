@@ -20,7 +20,7 @@ router.post("/polls/set-winner", (req, res, next) =>
 router.post("/polls/bet", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.placeBet)
 );
-router.get("/polls/:id", (req, res, next) =>
+router.get("/polls/:pollId", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.getPollById)
 );
 router.get("/polls/", (req, res, next) =>
