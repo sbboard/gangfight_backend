@@ -29,13 +29,15 @@ app.use(function (req, res, next) {
   ];
 
   const origin = req.headers.origin;
-  const host = req.headers.host.split(":")[0]; // Get the host part of the domain
+  const host = req.headers.host.split(":")[0];
 
-  if (!origin || origin === `https://${host}`) {
-    res.setHeader("Access-Control-Allow-Origin", "*"); // Or allow specific host `res.setHeader("Access-Control-Allow-Origin", `https://${host}`)`
+  if (req.headers.host === "localhost:8128") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  } else if (!origin || origin === `https://${host}`) {
+    res.setHeader("Access-Control-Allow-Origin", `https://${host}`);
   } else {
     if (allowedDomains.includes(new URL(origin).hostname)) {
-      res.setHeader("Access-Control-Allow-Origin", origin); // Allow the exact origin
+      res.setHeader("Access-Control-Allow-Origin", origin);
     } else {
       return res
         .status(403)
@@ -51,12 +53,12 @@ app.use(function (req, res, next) {
     "Access-Control-Allow-Headers, Access-Control-Allow-Origin, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization"
   );
 
-  // Disable Referrer-Policy (or set to no-referrer)
-  res.setHeader("Referrer-Policy", "no-referrer"); // Disables sending referrer
+  // Disable Referrer-Policy
+  res.setHeader("Referrer-Policy", "no-referrer");
 
   // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
-    return res.status(200).end(); // Respond to preflight request
+    return res.status(200).end();
   }
 
   next();
