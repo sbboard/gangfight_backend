@@ -88,7 +88,7 @@ exports.getPollById = async (req, res, next) => {
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    res.json(sanitizePoll(poll, userId));
+    res.json(await sanitizePoll(poll, userId));
   } catch (error) {
     next(error);
   }
@@ -141,7 +141,7 @@ exports.placeBet = async (req, res, next) => {
 
     res.json({
       message: "Bet placed successfully",
-      poll: sanitizePoll(poll, userId),
+      poll: await sanitizePoll(poll, userId),
       newBeanAmt: user.beans,
     });
   } catch (error) {
