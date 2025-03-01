@@ -216,6 +216,9 @@ exports.sellItem = async (req, res, next) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    if (user.inventory.length === 0)
+      return res.status(400).json({ message: "User has no items to sell" });
+
     const itemIndex = user.inventory.findIndex(
       (i) => i.name.toLowerCase() === itemName.toLowerCase()
     );
