@@ -1,6 +1,6 @@
 const cron = require("node-cron");
-const { User } = require("./models/beans.model.js");
-const { HOUSE_ID, DUPE_ID } = require("./beansecret.js");
+const { User, Poll } = require("./models/beans.model.js");
+const { HOUSE_ID } = require("./beansecret.js");
 
 const taxBrackets = [
   { threshold: 1_000_000_000, rate: 0.4 }, // 1B+ -> 40%
@@ -11,29 +11,40 @@ const taxBrackets = [
 
 async function collectBeanTaxes() {
   try {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
     const users = await User.find({
       beans: { $gt: 100_000_000 },
-      //_id: { $ne: HOUSE_ID },
-      _id: DUPE_ID,
+      _id: { $ne: HOUSE_ID },
+      //_id: DUPE_ID,
     });
 
-    console.log(users);
+    const updates = users.map(async (user) => {
+      // Check if the user has created any poll in the last week
+      const recentPolls = await Poll.find({
+        creatorId: user._id,
+        creationDate: { $gte: oneWeekAgo },
+      });
 
-    const updates = users.map((user) => {
+      // If the user has created a recent poll, skip the tax process for them
+      if (recentPolls.length > 0) return null; // Skip this user
+
       const { rate } = taxBrackets.find(
         (bracket) => user.beans >= bracket.threshold
       ) || { rate: 0 };
       const tax = Math.floor(user.beans * rate);
       user.beans -= tax;
 
-      console.log(
-        `💰 Taxed ${tax} beans (${rate * 100}%) from user ${user._id}`
-      );
+      console.log(`Taxed ${tax} beans (${rate * 100}%) from user ${user._id}`);
 
       return User.updateOne({ _id: user._id }, { $set: { beans: user.beans } });
     });
 
-    await Promise.all(updates); // Execute all updates in parallel
+    // Filter out null values (users skipped due to recent polls)
+    const validUpdates = updates.filter((update) => update !== null);
+
+    await Promise.all(validUpdates); // Execute all valid updates in parallel
     console.log("✅ Bean tax collection completed.");
   } catch (error) {
     console.error("❌ Error collecting bean taxes:", error);
@@ -42,9 +53,7 @@ async function collectBeanTaxes() {
 
 module.exports = function startTaxSchedule() {
   console.log("🕒 Bean tax scheduler initialized.");
-
-  //cron.schedule("0 20 * * 0", collectBeanTaxes, { timezone: "America/New_York" });
-  cron.schedule("52 16 * * 0", collectBeanTaxes, {
+  cron.schedule("0 20 * * 0", collectBeanTaxes, {
     timezone: "America/New_York",
   });
 };
