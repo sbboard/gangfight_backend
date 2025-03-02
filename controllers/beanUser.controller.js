@@ -1,8 +1,11 @@
 const { User } = require("../models/beans.model.js");
 const crypto = require("crypto");
 const mongoose = require("mongoose");
+const sanitizeUser = require("../utils/sanitizeUser");
+const { HOUSE_ID, DUPE_ID } = require("../beansecret.js");
 
-// Register a new user
+const getKey = (string) => string.slice(-10);
+
 exports.registerUser = async (req, res, next) => {
   try {
     const { name, password, inviteCode } = req.body;
@@ -49,7 +52,11 @@ exports.registerUser = async (req, res, next) => {
     });
 
     await user.save();
-    res.status(201).json({ message: "User registered successfully", user });
+    res.status(201).json({
+      message: "User registered successfully",
+      user: sanitizeUser(user),
+      key: getKey(hashedPassword),
+    });
   } catch (error) {
     next(error);
   }
@@ -74,7 +81,11 @@ exports.loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
-    res.json({ message: "Login successful", user });
+    res.json({
+      message: "Login successful",
+      user: sanitizeUser(user),
+      key: getKey(hashedInputPassword),
+    });
   } catch (error) {
     next(error);
   }
@@ -83,12 +94,19 @@ exports.loginUser = async (req, res, next) => {
 // Get user details
 exports.getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select(
-      "-password -lastIP -punishmentReason -registrationDate -referrer"
-    );
+    const { id, key } = req.params;
+
+    if (!id) return res.status(400).json({ message: "Missing id" });
+    if (!key) return res.status(400).json({ message: "Missing key" });
+
+    const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json(user);
+    // Check if the key matches the last 10 characters of the stored password
+    if (user.password.slice(-10) !== key)
+      return res.status(403).json({ message: "Invalid key" });
+
+    res.status(200).json(sanitizeUser(user));
   } catch (error) {
     next(error);
   }
@@ -97,15 +115,15 @@ exports.getUser = async (req, res, next) => {
 exports.getWinners = async (req, res, next) => {
   try {
     const excludedUsers = [
-      new mongoose.Types.ObjectId("67bbdee28094dd05bc218d1d"), // the house
-      new mongoose.Types.ObjectId("67b7d251d82f7305bc9b3425"), // dupe
+      new mongoose.Types.ObjectId(HOUSE_ID),
+      new mongoose.Types.ObjectId(DUPE_ID),
     ];
 
     const winners = await User.find({
       contentType: "user",
       _id: { $nin: excludedUsers }, // Exclude specific users
       role: { $ne: "banned" }, // Exclude banned users
-    }).select("name beans debt wins");
+    }).select("name beans debt wins -_id");
 
     // Sort by beans - debt in descending order
     winners.sort((a, b) => b.beans - b.debt - (a.beans - a.debt));
@@ -132,14 +150,16 @@ exports.updateUser = async (req, res, next) => {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json({ message: "User updated successfully", user });
+    res.json({
+      message: "User updated successfully",
+      user: sanitizeUser(user),
+    });
   } catch (error) {
     next(error);
   }
 };
 
 // STORE
-
 const ITEMS = {
   invite: {
     price: 20000000,
@@ -195,7 +215,7 @@ exports.buyItem = async (req, res, next) => {
     user.inventory.push({ name: itemName, meta });
     await user.save();
 
-    res.json({ message: "Item purchased", user });
+    res.json({ message: "Item purchased", user: sanitizeUser(user) });
   } catch (error) {
     next(error);
   }
@@ -210,6 +230,9 @@ exports.sellItem = async (req, res, next) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    if (user.inventory.length === 0)
+      return res.status(400).json({ message: "User has no items to sell" });
+
     const itemIndex = user.inventory.findIndex(
       (i) => i.name.toLowerCase() === itemName.toLowerCase()
     );
@@ -220,14 +243,26 @@ exports.sellItem = async (req, res, next) => {
     user.beans += Math.floor(item.price / 2);
     await user.save();
 
-    res.json({ message: "Item sold", user });
+    res.json({ message: "Item sold", user: sanitizeUser(user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getJackpot = async (req, res, next) => {
+  try {
+    const house = await User.findById(HOUSE_ID);
+    if (!house) {
+      return res.status(404).json({ message: "House account not found" });
+    }
+
+    res.json({ jackpot: house.beans ?? 0 });
   } catch (error) {
     next(error);
   }
 };
 
 exports.runLottery = async (req, res, next) => {
-  const HOUSE_ID = "67bbdee28094dd05bc218d1d";
   try {
     const LOTTO_PRICE = 10000;
     const { userId } = req.body;
@@ -244,7 +279,7 @@ exports.runLottery = async (req, res, next) => {
     user.beans -= LOTTO_PRICE;
     await user.save();
 
-    const isWinner = Math.random() < 1 / 10000;
+    const isWinner = Math.random() < 1 / 100000;
 
     let house = await User.findById(HOUSE_ID);
     if (!house) {
@@ -271,7 +306,7 @@ exports.runLottery = async (req, res, next) => {
 
     res.json({
       message,
-      user,
+      user: sanitizeUser(user),
       houseBeans: house.beans,
     });
   } catch (error) {
@@ -324,7 +359,7 @@ exports.requestDebt = async (req, res, next) => {
 
     res.json({
       message: `Debt of ${amount} requested successfully. Total debt with 20% fee: ${debtWithFee}`,
-      user,
+      user: sanitizeUser(user),
     });
   } catch (error) {
     next(error);
@@ -364,7 +399,7 @@ exports.payOffDebt = async (req, res, next) => {
 
     res.json({
       message: `Successfully paid off ${payAmount} of the debt. Remaining debt: ${user.debt}`,
-      user,
+      user: sanitizeUser(user),
     });
   } catch (error) {
     next(error);

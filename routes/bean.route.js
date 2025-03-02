@@ -20,7 +20,7 @@ router.post("/polls/set-winner", (req, res, next) =>
 router.post("/polls/bet", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.placeBet)
 );
-router.get("/polls/:id", (req, res, next) =>
+router.get("/polls/:pollId", (req, res, next) =>
   handleRequest(req, res, next, "polls", pollController.getPollById)
 );
 router.get("/polls/", (req, res, next) =>
@@ -37,7 +37,7 @@ router.post("/user/login", (req, res, next) =>
 router.get("/user/winners", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.getWinners)
 );
-router.get("/user/:id", (req, res, next) =>
+router.get("/user/:id/:key", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.getUser)
 );
 router.put("/user/:id", (req, res, next) =>
@@ -56,6 +56,9 @@ router.post("/store/check-invite", (req, res, next) =>
 );
 router.post("/store/lottery", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.runLottery)
+);
+router.get("/store/get-jackpot", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.getJackpot)
 );
 router.post("/store/debt", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.requestDebt)
