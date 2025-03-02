@@ -37,7 +37,7 @@ router.post("/user/login", (req, res, next) =>
 router.get("/user/winners", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.getWinners)
 );
-router.get("/user/:id", (req, res, next) =>
+router.get("/user/:id/:key", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.getUser)
 );
 router.put("/user/:id", (req, res, next) =>

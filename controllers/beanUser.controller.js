@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const sanitizeUser = require("../utils/sanitizeUser");
 const { HOUSE_ID, DUPE_ID } = require("../beansecret.js");
 
+const getKey = (string) => string.slice(-10);
+
 exports.registerUser = async (req, res, next) => {
   try {
     const { name, password, inviteCode } = req.body;
@@ -53,6 +55,7 @@ exports.registerUser = async (req, res, next) => {
     res.status(201).json({
       message: "User registered successfully",
       user: sanitizeUser(user),
+      key: getKey(hashedPassword),
     });
   } catch (error) {
     next(error);
@@ -78,7 +81,11 @@ exports.loginUser = async (req, res, next) => {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
-    res.json({ message: "Login successful", user: sanitizeUser(user) });
+    res.json({
+      message: "Login successful",
+      user: sanitizeUser(user),
+      key: getKey(hashedInputPassword),
+    });
   } catch (error) {
     next(error);
   }
@@ -87,12 +94,19 @@ exports.loginUser = async (req, res, next) => {
 // Get user details
 exports.getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select(
-      "-password -punishmentReason -registrationDate -referrer"
-    );
+    const { id, key } = req.params;
+
+    if (!id) return res.status(400).json({ message: "Missing id" });
+    if (!key) return res.status(400).json({ message: "Missing key" });
+
+    const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json(sanitizeUser(user));
+    // Check if the key matches the last 10 characters of the stored password
+    if (user.password.slice(-10) !== key)
+      return res.status(403).json({ message: "Invalid key" });
+
+    res.status(200).json(sanitizeUser(user));
   } catch (error) {
     next(error);
   }
