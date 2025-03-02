@@ -168,6 +168,18 @@ const ITEMS = {
   },
   "bookie license": { price: 11000000, generateMeta: () => "" },
   adblock: { price: 1000000, generateMeta: () => "" },
+  "magic beans": {
+    price: 100000000,
+    generateMeta: () => "",
+    maintainsValue: true,
+  },
+  "shield of turin": {
+    price: 250000000,
+    generateMeta: () => "",
+    maintainsValue: true,
+  },
+  head: { price: 500000000, generateMeta: () => "", maintainsValue: true },
+  demon: { price: 1000000000, generateMeta: () => "", maintainsValue: true },
 };
 
 const generateUniqueInviteCode = async () => {
@@ -240,7 +252,8 @@ exports.sellItem = async (req, res, next) => {
       return res.status(400).json({ message: "Item not found in inventory" });
 
     user.inventory.splice(itemIndex, 1);
-    user.beans += Math.floor(item.price / 2);
+    const itemValue = item.maintainsValue ? item.price : item.price / 2;
+    user.beans += Math.floor(itemValue);
     await user.save();
 
     res.json({ message: "Item sold", user: sanitizeUser(user) });
