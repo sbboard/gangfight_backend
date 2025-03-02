@@ -6,6 +6,7 @@ const sanitizeUser = (user) => {
   // Remove sensitive fields
   delete sanitizedUser.password;
   delete sanitizedUser.referrer;
+  delete sanitizedUser.password;
 
   return sanitizedUser;
 };
