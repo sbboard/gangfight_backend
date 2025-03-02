@@ -109,7 +109,7 @@ exports.getWinners = async (req, res, next) => {
       contentType: "user",
       _id: { $nin: excludedUsers }, // Exclude specific users
       role: { $ne: "banned" }, // Exclude banned users
-    }).select("name beans debt wins");
+    }).select("name beans debt wins -_id");
 
     // Sort by beans - debt in descending order
     winners.sort((a, b) => b.beans - b.debt - (a.beans - a.debt));
