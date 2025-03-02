@@ -3,6 +3,7 @@ const fileUpload = require("express-fileupload");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 const MONDO_SECRET = require("./mondosecret.js");
+const startTaxSchedule = require("./taxCollector"); // Import tax system
 
 const mongoDB = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
 mongoose.connect(mongoDB, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -79,3 +80,5 @@ const port = process.env.PORT || 8128;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+startTaxSchedule(); // Start the tax collector
