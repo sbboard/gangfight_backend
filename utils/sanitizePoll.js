@@ -1,17 +1,29 @@
+const { User } = require("../models/beans.model");
+let userCache = {};
+
 const sanitizePoll = async (poll, requestingUserId) => {
   if (!poll) return null;
 
   const sanitizedPoll = poll.toObject ? poll.toObject() : { ...poll };
 
-  const { User } = require("../models/beans.model");
-  const creator = await User.findById(sanitizedPoll.creatorId)
-    .select("name")
-    .lean();
-  sanitizedPoll.creatorName = creator ? creator.name : "Unknown";
+  const userIds = [
+    sanitizedPoll.creatorId,
+    ...sanitizedPoll.options.flatMap((option) => option.bettors),
+  ];
 
+  const uniqueUserIds = [...new Set(userIds)];
+  const uncachedUserIds = uniqueUserIds.filter((userId) => !userCache[userId]);
+  if (uncachedUserIds.length > 0) {
+    const users = await User.find({ _id: { $in: uncachedUserIds } })
+      .select("name")
+      .lean();
+    users.forEach((user) => (userCache[user._id.toString()] = user.name));
+  }
+
+  // Assign cached user names
+  sanitizedPoll.creatorName = userCache[sanitizedPoll.creatorId] || "Unknown";
   delete sanitizedPoll.creatorId;
 
-  // Replace bettor IDs with "dummy", except for the requesting user
   sanitizedPoll.options = sanitizedPoll.options.map((option) => ({
     ...option,
     bettors: option.bettors.map((bettorId) =>

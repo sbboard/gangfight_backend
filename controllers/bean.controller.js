@@ -105,18 +105,14 @@ exports.placeBet = async (req, res, next) => {
 
     // Find the option by ID
     const option = poll.options.find((opt) => opt._id.toString() === optionId);
-    if (!option) {
-      return res.status(400).json({ message: "Invalid option ID" });
-    }
+    if (!option) return res.status(400).json({ message: "Invalid option ID" });
 
-    if (poll.endDate < Date.now()) {
+    if (poll.endDate < Date.now())
       return res.status(400).json({ message: "Poll has ended" });
-    }
 
     // Validate shares
-    if (!shares || shares < 1) {
+    if (!shares || shares < 1)
       return res.status(400).json({ message: "Invalid number of shares" });
-    }
 
     // Find the user and check if they have enough beans
     const user = await User.findById(userId);
@@ -131,20 +127,21 @@ exports.placeBet = async (req, res, next) => {
 
     // Deduct beans and save the user
     user.beans -= totalCost;
-    await user.save();
 
     // Update the poll pot and add the user to the bettors array
     poll.pot += totalCost;
 
     // Add user to the bettors array as many times as shares bought
     option.bettors.push(...Array(shares).fill(userId));
-    await poll.save();
 
     res.json({
       message: "Bet placed successfully",
       poll: await sanitizePoll(poll, userId),
       newBeanAmt: user.beans,
     });
+
+    await poll.save();
+    await user.save();
   } catch (error) {
     next(error);
   }
