@@ -66,5 +66,8 @@ router.post("/store/debt", (req, res, next) =>
 router.post("/store/pay-debt", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.payOffDebt)
 );
+router.post("/store/send-beans", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.sendBeans)
+);
 
 module.exports = router;

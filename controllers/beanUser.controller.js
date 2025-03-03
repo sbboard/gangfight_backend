@@ -233,6 +233,67 @@ exports.buyItem = async (req, res, next) => {
   }
 };
 
+exports.sendBeans = async (req, res, next) => {
+  try {
+    const { userId, userKey, recipientName, message, amount } = req.body;
+
+    let sender = await User.findById(userId);
+    if (!sender) return res.status(404).json({ message: "User not found" });
+
+    if (sender.password.slice(-10) !== userKey) {
+      return res.status(403).json({ message: "Invalid key" });
+    }
+
+    if (sender.debt > 0) {
+      return res
+        .status(400)
+        .json({ message: "You can't transfer beans while in debt" });
+    }
+
+    if (sender.beans < amount) {
+      return res.status(400).json({ message: "Not enough beans" });
+    }
+
+    if (amount < 500_000) {
+      return res
+        .status(400)
+        .json({ message: "Minimum transfer amount is 500,000 beans" });
+    }
+
+    const recipient = await User.findOne({
+      contentType: "user",
+      name: recipientName.trim(),
+    }).collation({ locale: "en", strength: 2 });
+
+    if (!recipient)
+      return res.status(404).json({ message: "Recipient not found" });
+
+    // Add item to recipient's inventory
+    const item = {
+      name: "bean bag",
+      meta: sender.displayName,
+      specialPrice: amount,
+      specialDescription: message,
+    };
+
+    sender.beans -= amount;
+    recipient.inventory = recipient.inventory || [];
+    recipient.inventory.push(item);
+
+    await Promise.all([sender.save(), recipient.save()]);
+
+    // **Fetch updated sender info**
+    sender = await User.findById(userId).lean();
+
+    res.json({
+      message: "Beans transferred successfully",
+      user: sanitizeUser(sender), // Ensure latest sender data is sent
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.sellItem = async (req, res, next) => {
   try {
     const { userId, itemName } = req.body;
