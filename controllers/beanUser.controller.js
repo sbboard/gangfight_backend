@@ -296,24 +296,45 @@ exports.sendBeans = async (req, res, next) => {
 
 exports.sellItem = async (req, res, next) => {
   try {
-    const { userId, itemName } = req.body;
-    const item = ITEMS[itemName.toLowerCase()];
-    if (!item) return res.status(400).json({ message: "Invalid item" });
+    const { userId, itemName, itemId } = req.body;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.inventory.length === 0)
+    if (user.inventory.length === 0) {
       return res.status(400).json({ message: "User has no items to sell" });
+    }
 
-    const itemIndex = user.inventory.findIndex(
-      (i) => i.name.toLowerCase() === itemName.toLowerCase()
-    );
-    if (itemIndex === -1)
+    let itemValue = null;
+    let itemIndex = -1;
+
+    if (itemId) {
+      itemIndex = user.inventory.findIndex((i) => i._id == itemId);
+      if (itemIndex !== -1) {
+        itemValue = user.inventory[itemIndex].specialPrice;
+      }
+    }
+
+    if (itemValue === null && itemName) {
+      const item = ITEMS[itemName.toLowerCase()];
+      if (!item) {
+        return res.status(400).json({ message: "Invalid item name" });
+      }
+
+      itemIndex = user.inventory.findIndex(
+        (i) => i.name.toLowerCase() === itemName.toLowerCase()
+      );
+
+      if (itemIndex !== -1) {
+        itemValue = item.maintainsValue ? item.price : item.price / 2;
+      }
+    }
+
+    if (itemIndex === -1) {
       return res.status(400).json({ message: "Item not found in inventory" });
+    }
 
     user.inventory.splice(itemIndex, 1);
-    const itemValue = item.maintainsValue ? item.price : item.price / 2;
     user.beans += Math.floor(itemValue);
     await user.save();
 

@@ -35,6 +35,8 @@ const pollSchema = new Schema({
 const inventoryItemSchema = new Schema({
   name: { type: String, required: true },
   meta: { type: String, default: "" },
+  specialDescription: { type: String },
+  specialPrice: { type: Number },
 });
 
 const userSchema = new Schema({
@@ -65,4 +67,5 @@ const userSchema = new Schema({
 module.exports = {
   User: mongoose.model("User", userSchema, "beans"),
   Poll: mongoose.model("Poll", pollSchema, "beans"),
+  Item: mongoose.model("Item", inventoryItemSchema, "beans"),
 };
