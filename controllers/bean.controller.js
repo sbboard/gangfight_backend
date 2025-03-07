@@ -1,5 +1,6 @@
 const { Poll, User } = require("../models/beans.model.js");
 const sanitizePoll = require("../utils/sanitizePoll.js");
+const sanitizeUser = require("../utils/sanitizeUser.js");
 
 // Create a new poll
 exports.createPoll = async (req, res, next) => {
