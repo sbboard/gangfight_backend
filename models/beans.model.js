@@ -41,12 +41,6 @@ const inventoryItemSchema = new Schema({
 
 const userSchema = new Schema({
   name: { type: String, required: true },
-  displayName: {
-    type: String,
-    default: function () {
-      return this.name;
-    },
-  },
   lastIP: { type: String },
   debt: { type: Number, default: 0 },
   password: { type: String, required: true },

@@ -271,7 +271,7 @@ exports.sendBeans = async (req, res, next) => {
     // Add item to recipient's inventory
     const item = {
       name: "bean bag",
-      meta: sender.displayName,
+      meta: sender.name,
       specialPrice: amount,
       specialDescription: message,
     };
