@@ -208,6 +208,12 @@ exports.buyItem = async (req, res, next) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
+    if (user.role === "racketeer" && itemName === "bookie license") {
+      return res
+        .status(400)
+        .json({ message: "You can't buy a bookie license" });
+    }
+
     if (user.debt > 0)
       return res
         .status(400)

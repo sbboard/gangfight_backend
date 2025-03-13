@@ -31,6 +31,15 @@ exports.createPoll = async (req, res, next) => {
       return res.status(400).json({ message: "Insufficient beans" });
     }
 
+    const hasBookieLicense = user.inventory.some(
+      (item) => item.name === "bookie license"
+    );
+    if (!hasBookieLicense) {
+      return res
+        .status(400)
+        .json({ message: "User does not have a bookie license" });
+    }
+
     if (user.role == "spectator" || user.role == "bettor" || !user.role) {
       user.role = "bookie";
     }

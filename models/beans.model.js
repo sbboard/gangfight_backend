@@ -29,9 +29,19 @@ const pollSchema = new Schema({
     default: "poll",
     immutable: true,
   },
+  legalStatus: {
+    isLegal: { type: Boolean, default: true },
+    lawsBroken: { type: [String], default: [] },
+    dateBanned: { type: Date },
+  },
 });
 
 // User Schema
+const ledgerSchema = new Schema({
+  text: { type: String, required: true },
+  date: { type: Date, default: Date.now },
+});
+
 const inventoryItemSchema = new Schema({
   name: { type: String, required: true },
   meta: { type: String, default: "" },
@@ -55,6 +65,9 @@ const userSchema = new Schema({
     default: "user",
     immutable: true,
   },
+  ledgers: [ledgerSchema],
+  ledgerLastChecked: { type: Date, default: Date.now },
+  penalties: { type: Number, default: 0 },
 });
 
 // Export models
