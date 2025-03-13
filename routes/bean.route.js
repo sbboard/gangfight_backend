@@ -43,6 +43,12 @@ router.get("/user/:id/:key", (req, res, next) =>
 router.put("/user/:id", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.updateUser)
 );
+router.post("/mass-notification", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.sendMassNotification)
+);
+router.put("/user/:id/update-notification", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.updateNotification)
+);
 
 // Store routes
 router.post("/store/buy-item", (req, res, next) =>

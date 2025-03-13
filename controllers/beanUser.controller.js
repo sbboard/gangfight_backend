@@ -134,6 +134,7 @@ exports.getWinners = async (req, res, next) => {
 };
 
 // Update user information
+//this controller should not exist, really
 exports.updateUser = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -141,11 +142,18 @@ exports.updateUser = async (req, res, next) => {
 
     delete updateData.password;
     delete updateData.contentType;
+    delete updateData._id;
+    delete updateData.role;
+    delete updateData.beans;
+    delete updateData.wins;
+    delete updateData.inventory;
+    delete updateData.name;
+    delete updateData.penalties;
 
     const user = await User.findByIdAndUpdate(id, updateData, {
       new: true,
       runValidators: true,
-    }).select("-password");
+    });
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -349,6 +357,25 @@ exports.sellItem = async (req, res, next) => {
   }
 };
 
+exports.updateNotification = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.notificationsLastChecked = new Date();
+    await user.save();
+
+    res.json({
+      message: "Last notification check updated",
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.getJackpot = async (req, res, next) => {
   try {
     const house = await User.findById(HOUSE_ID);
@@ -501,6 +528,39 @@ exports.payOffDebt = async (req, res, next) => {
       message: `Successfully paid off ${payAmount} of the debt. Remaining debt: ${user.debt}`,
       user: sanitizeUser(user),
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.sendMassNotification = async (req, res, next) => {
+  try {
+    const { userId, userKey, message } = req.body;
+
+    // Find the user by ID
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    //check if user is an admin
+    if (user.role !== "admin")
+      return res.status(403).json({ message: "User is not an admin" });
+
+    // Check if the key matches the last 10 characters of the stored password
+    if (user.password.slice(-10) !== userKey)
+      return res.status(403).json({ message: "Invalid key" });
+
+    // Find all users
+    const users = await User.find({ contentType: "user" });
+    if (!users) return res.status(404).json({ message: "No users found" });
+
+    // Send the message to all users
+    users.forEach(async (u) => {
+      if (!u.notifications) u.notifications = [];
+      u.notifications.push({ text: message });
+      await u.save();
+    });
+
+    res.json({ message: "Message sent to all users" });
   } catch (error) {
     next(error);
   }

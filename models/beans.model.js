@@ -37,7 +37,7 @@ const pollSchema = new Schema({
 });
 
 // User Schema
-const ledgerSchema = new Schema({
+const notificationSchema = new Schema({
   text: { type: String, required: true },
   date: { type: Date, default: Date.now },
 });
@@ -65,8 +65,8 @@ const userSchema = new Schema({
     default: "user",
     immutable: true,
   },
-  ledgers: [ledgerSchema],
-  ledgerLastChecked: { type: Date, default: Date.now },
+  notifications: [notificationSchema],
+  notificationsLastChecked: { type: Date, default: Date.now },
   penalties: { type: Number, default: 0 },
 });
 
