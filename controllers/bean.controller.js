@@ -43,6 +43,7 @@ exports.createPoll = async (req, res, next) => {
     if (user.role == "spectator" || user.role == "bettor" || !user.role) {
       user.role = "bookie";
     }
+
     user.beans -= seed;
     await user.save();
 

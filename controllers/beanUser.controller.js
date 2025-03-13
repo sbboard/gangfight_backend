@@ -122,7 +122,6 @@ exports.getWinners = async (req, res, next) => {
     const winners = await User.find({
       contentType: "user",
       _id: { $nin: excludedUsers }, // Exclude specific users
-      role: { $ne: "banned" }, // Exclude banned users
     }).select("name beans debt wins -_id");
 
     // Sort by beans - debt in descending order
