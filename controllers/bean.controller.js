@@ -266,3 +266,75 @@ exports.setPollWinner = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.makeWagerIllegal = async (req, res, next) => {
+  try {
+    const { pollId, userId, userKey, lawsBroken } = req.body;
+
+    // Fetch user and validate admin role
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.role !== "admin")
+      return res.status(403).json({ message: "User is not an admin" });
+    if (user.password.slice(-10) !== userKey)
+      return res.status(403).json({ message: "Invalid key" });
+
+    // Fetch poll and validate existence
+    const poll = await Poll.findById(pollId);
+    if (!poll) return res.status(404).json({ message: "Poll not found" });
+
+    // Mark poll as illegal
+    poll.legalStatus = {
+      lawsBroken: lawsBroken.split(",").map((law) => law.trim()),
+      dateBanned: new Date(),
+    };
+    await poll.save();
+
+    // Notify bettors
+    const notification = {
+      text: `ALERT: You are a victim! You bet in the wager "${poll.title}" which was found to be an illegal wager. 
+      The wager has been closed, but ${poll.creator} successfully stole all the beans associated with it.`,
+    };
+
+    await User.updateMany(
+      { _id: { $in: poll.options.flatMap((opt) => opt.bettors) } },
+      { $push: { notifications: notification } }
+    );
+
+    // Fetch creator
+    const creator = await User.findById(poll.creatorId);
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+
+    // Apply penalty and possible role change
+    creator.penalties = (creator.penalties || 0) + 1;
+    if (creator.penalties >= 3) {
+      creator.role = "racketeer";
+    }
+
+    // Remove bookie license if present
+    creator.inventory = creator.inventory.filter(
+      (item) => item.name !== "bookie license"
+    );
+
+    // Notify creator
+    const creatorNotification = {
+      text:
+        `Your wager "${poll.title}" was found to be illegal due to breaking the following laws: ${lawsBroken}.` +
+        ` You did, however, successfully steal all ${poll.pot} beans associated with your illegal wager.` +
+        (creator.penalties >= 3
+          ? " You have been labeled a racketeer due to repeated offenses."
+          : ""),
+    };
+    creator.notifications.push(creatorNotification);
+
+    // Reward creator with the pot
+    creator.beans += poll.pot;
+
+    // Save creator changes
+    await creator.save();
+
+    res.json({ message: "Bet made illegal" });
+  } catch (error) {
+    next(error);
+  }
+};
