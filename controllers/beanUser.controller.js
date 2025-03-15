@@ -34,6 +34,12 @@ exports.registerUser = async (req, res, next) => {
     inviter.inventory = inviter.inventory.filter(
       (item) => !(item.name === "invite" && item.meta === inviteCode)
     );
+
+    inviter.notifications = inviter.notifications || [];
+    inviter.notifications.push({
+      text: `Your invite code was used by ${name}`,
+    });
+
     await inviter.save();
     referrer = inviter._id;
 
@@ -49,6 +55,11 @@ exports.registerUser = async (req, res, next) => {
       password: hashedPassword,
       wins: [],
       referrer,
+    });
+
+    user.notifications = [];
+    user.notifications.push({
+      text: "Welcome to the game! You have been awarded 10,000,000 beans to start betting.",
     });
 
     await user.save();
@@ -297,6 +308,11 @@ exports.sendBeans = async (req, res, next) => {
     recipient.inventory = recipient.inventory || [];
     recipient.inventory.push(item);
 
+    recipient.notifications = recipient.notifications || [];
+    recipient.notifications.push({
+      text: `${sender.name} sent you ${amount.toLocaleString()} beans`,
+    });
+
     await Promise.all([sender.save(), recipient.save()]);
 
     // **Fetch updated sender info**
@@ -486,6 +502,18 @@ exports.runLottery = async (req, res, next) => {
       await house.save();
       await user.save();
       message = `Congratulations! You won ${wonBeans} beans!`;
+
+      //send all users a notification that user won the lottery
+      const users = await User.find({ contentType: "user" });
+      users.forEach(async (u) => {
+        if (!u.notifications) u.notifications = [];
+        u.notifications.push({
+          text: `${
+            user.name
+          } won the lottery! The jackpot was ${wonBeans.toLocaleString()}.`,
+        });
+        await u.save();
+      });
     } else {
       house.beans += LOTTO_PRICE;
       await house.save();

@@ -61,6 +61,21 @@ exports.createPoll = async (req, res, next) => {
     });
     await poll.save();
 
+    const highRoller = pricePerShare >= 10_000_000;
+    const highProfile = seed * 2 >= 10_000_000;
+
+    if (highRoller || highProfile) {
+      const notification = {
+        text: `A ${
+          highRoller ? "HIGH ROLLER" : "HIGH PROFILE"
+        } BET HAS BEEN STARTED: ${title}`,
+      };
+      await User.updateMany(
+        { userType: "user" },
+        { $push: { notifications: notification } }
+      );
+    }
+
     res.status(201).json({
       message: "Poll created successfully",
       newBeanAmt: user.beans,
@@ -230,7 +245,12 @@ exports.setPollWinner = async (req, res, next) => {
       Array.from(userPayouts.entries()).map(async ([userId, totalPayout]) => {
         await User.findByIdAndUpdate(userId, {
           $inc: { beans: totalPayout },
-          $push: { wins: pollId },
+          $push: {
+            wins: pollId,
+            notifications: {
+              text: `You won ${totalPayout} from the wager "${poll.title}".`,
+            },
+          },
         });
       })
     );
