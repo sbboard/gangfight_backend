@@ -295,6 +295,10 @@ exports.makeWagerIllegal = async (req, res, next) => {
     if (poll.endDate < Date.now())
       return res.status(400).json({ message: "Wager already ended" });
 
+    //set End Date and settle date to now
+    poll.endDate = Date.now();
+    poll.settleDate = Date.now();
+
     // Mark poll as illegal
     poll.legalStatus = {
       isLegal: false,

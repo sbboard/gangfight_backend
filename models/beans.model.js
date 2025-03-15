@@ -32,7 +32,6 @@ const pollSchema = new Schema({
   legalStatus: {
     isLegal: { type: Boolean, default: true },
     lawsBroken: { type: [String], default: [] },
-    dateBanned: { type: Date },
   },
 });
 
