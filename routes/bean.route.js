@@ -58,7 +58,7 @@ router.get("/admin/house-invites", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.getHouseInvites)
 );
 router.post("/admin/make-poll-illegal", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.makeWagerIllegal)
+  handleRequest(req, res, next, "users", pollController.makeWagerIllegal)
 );
 
 // Store routes

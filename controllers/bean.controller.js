@@ -283,27 +283,40 @@ exports.makeWagerIllegal = async (req, res, next) => {
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
+    // if poll is already illegal, return
+    if (!poll.legalStatus.isLegal)
+      return res.status(400).json({ message: "Wager already illegal" });
+
+    //if poll is already settled, return
+    if (poll.winner)
+      return res.status(400).json({ message: "Wager already settled" });
+
+    //if poll is already ended, return
+    if (poll.endDate < Date.now())
+      return res.status(400).json({ message: "Wager already ended" });
+
     // Mark poll as illegal
     poll.legalStatus = {
+      isLegal: false,
       lawsBroken: lawsBroken.split(",").map((law) => law.trim()),
       dateBanned: new Date(),
     };
     await poll.save();
 
+    // Fetch creator
+    const creator = await User.findById(poll.creatorId);
+    if (!creator) return res.status(404).json({ message: "Creator not found" });
+
     // Notify bettors
     const notification = {
       text: `ALERT: You are a victim! You bet in the wager "${poll.title}" which was found to be an illegal wager. 
-      The wager has been closed, but ${poll.creator} successfully stole all the beans associated with it.`,
+      The wager has been closed, but ${creator.name} successfully stole all the beans associated with it.`,
     };
 
     await User.updateMany(
       { _id: { $in: poll.options.flatMap((opt) => opt.bettors) } },
       { $push: { notifications: notification } }
     );
-
-    // Fetch creator
-    const creator = await User.findById(poll.creatorId);
-    if (!creator) return res.status(404).json({ message: "Creator not found" });
 
     // Apply penalty and possible role change
     creator.penalties = (creator.penalties || 0) + 1;
@@ -320,7 +333,7 @@ exports.makeWagerIllegal = async (req, res, next) => {
     const creatorNotification = {
       text:
         `Your wager "${poll.title}" was found to be illegal due to breaking the following laws: ${lawsBroken}.` +
-        ` You did, however, successfully steal all ${poll.pot} beans associated with your illegal wager.` +
+        ` You did, however, successfully steal all ${poll.pot.toLocaleString()} beans associated with your illegal wager.` +
         (creator.penalties >= 3
           ? " You have been labeled a racketeer due to repeated offenses."
           : ""),
