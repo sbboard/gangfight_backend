@@ -171,7 +171,11 @@ const ITEMS = {
   invite: {
     price: 20000000,
     generateMeta: () =>
-      Math.random().toString(36).substring(2, 7).toUpperCase(),
+      Math.random()
+        .toString(36)
+        .substring(2, 7)
+        .replace(/[0-9]/g, "")
+        .toUpperCase(),
   },
   "bookie license": { price: 11000000, generateMeta: () => "" },
   adblock: { price: 1000000, generateMeta: () => "" },
@@ -384,6 +388,65 @@ exports.getJackpot = async (req, res, next) => {
     }
 
     res.json({ jackpot: house.beans ?? 0 });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.createHouseInvite = async (req, res, next) => {
+  try {
+    const { userId, userKey } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.role !== "admin")
+      return res.status(403).json({ message: "User is not an admin" });
+
+    if (user.password.slice(-10) !== userKey)
+      return res.status(403).json({ message: "Invalid key" });
+
+    const house = await User.findById(HOUSE_ID);
+    if (!house)
+      return res.status(404).json({ message: "House account not found" });
+
+    const inviteCode = await generateUniqueInviteCode();
+
+    house.inventory.push({ name: "invite", meta: inviteCode });
+    await house.save();
+
+    const invites = house.inventory.filter((item) => item.name === "invite");
+
+    res.json({ message: "Invite created", invites });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getHouseInvites = async (req, res, next) => {
+  try {
+    const { userId, userKey } = req.query;
+
+    // Find the user by ID
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    //check if user is an admin
+    if (user.role !== "admin")
+      return res.status(403).json({ message: "User is not an admin" });
+
+    // Check if the key matches the last 10 characters of the stored password
+    if (user.password.slice(-10) !== userKey)
+      return res.status(403).json({ message: "Invalid key" });
+
+    // Find all users
+    const house = await User.findById(HOUSE_ID);
+    if (!house)
+      return res.status(404).json({ message: "House account not found" });
+
+    const invites = house.inventory.filter((item) => item.name === "invite");
+
+    res.json({ invites });
   } catch (error) {
     next(error);
   }

@@ -43,11 +43,19 @@ router.get("/user/:id/:key", (req, res, next) =>
 router.put("/user/:id", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.updateUser)
 );
-router.post("/mass-notification", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.sendMassNotification)
-);
 router.put("/user/:id/update-notification", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.updateNotification)
+);
+
+//Admin Tools
+router.post("/admin/mass-notification", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.sendMassNotification)
+);
+router.post("/admin/house-invites", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.createHouseInvite)
+);
+router.get("/admin/house-invites", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.getHouseInvites)
 );
 
 // Store routes
