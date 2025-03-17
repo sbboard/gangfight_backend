@@ -17,18 +17,15 @@ async function collectBeanTaxes() {
     const users = await User.find({
       beans: { $gt: 100_000_000 },
       _id: { $ne: HOUSE_ID },
-      //_id: DUPE_ID,
     });
 
     const updates = users.map(async (user) => {
-      // Check if the user has created any poll in the last week
       const recentPolls = await Poll.find({
         creatorId: user._id,
         creationDate: { $gte: oneWeekAgo },
       });
 
-      // If the user has created a recent poll, skip the tax process for them
-      if (recentPolls.length > 0) return null; // Skip this user
+      if (recentPolls.length > 0) return null;
 
       const { rate } = taxBrackets.find(
         (bracket) => user.beans >= bracket.threshold
@@ -36,16 +33,24 @@ async function collectBeanTaxes() {
       const tax = Math.floor(user.beans * rate);
       user.beans -= tax;
 
-      console.log(`Taxed ${tax} beans (${rate * 100}%) from user ${user._id}`);
-
-      return User.updateOne({ _id: user._id }, { $set: { beans: user.beans } });
+      return User.updateOne(
+        { _id: user._id },
+        {
+          $set: { beans: user.beans },
+          $push: {
+            notifications: {
+              text: `You were taxed ${tax.toLocaleString()} beans (${
+                rate * 100
+              }%). Thank you for your contribution to the community!`,
+            },
+          },
+        }
+      );
     });
 
-    // Filter out null values (users skipped due to recent polls)
     const validUpdates = updates.filter((update) => update !== null);
 
-    await Promise.all(validUpdates); // Execute all valid updates in parallel
-    console.log("✅ Bean tax collection completed.");
+    await Promise.all(validUpdates);
   } catch (error) {
     console.error("❌ Error collecting bean taxes:", error);
   }
