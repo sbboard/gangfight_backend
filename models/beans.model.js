@@ -65,7 +65,7 @@ const userSchema = new Schema({
     immutable: true,
   },
   notifications: [notificationSchema],
-  notificationsLastChecked: { type: Date, default: Date.now },
+  notificationsLastChecked: { type: Date },
   penalties: { type: Number, default: 0 },
 });
 

@@ -22,6 +22,16 @@ exports.createPoll = async (req, res, next) => {
         .json({ message: "Seed must be at least the price per share" });
     }
 
+    if (options.length < 2) {
+      return res
+        .status(400)
+        .json({ message: "At least 2 options are required" });
+    }
+
+    if (options.length > 15) {
+      return res.status(400).json({ message: "Maximum of 15 options allowed" });
+    }
+
     // Find the user and deduct 2 beans
     const user = await User.findById(creatorId);
     if (!user) {
