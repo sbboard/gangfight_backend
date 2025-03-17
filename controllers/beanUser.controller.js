@@ -59,7 +59,7 @@ exports.registerUser = async (req, res, next) => {
 
     user.notifications = [];
     user.notifications.push({
-      text: "Welcome to the game! You have been awarded 10,000,000 beans to start betting.",
+      text: "Welcome to the game! You have been gifted 10,000,000 beans to start betting.",
     });
 
     await user.save();
