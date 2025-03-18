@@ -258,11 +258,30 @@ exports.setPollWinner = async (req, res, next) => {
           $push: {
             wins: pollId,
             notifications: {
-              text: `You won ${totalPayout} from the wager "${poll.title}".`,
+              text: `Congratulations! You won ${totalPayout.toLocaleString()} from the wager "${
+                poll.title
+              }".`,
             },
           },
         });
       })
+    );
+
+    await User.updateMany(
+      {
+        _id: {
+          $in: poll.options
+            .filter((opt) => opt._id.toString() !== optionId)
+            .flatMap((opt) => opt.bettors),
+        },
+      },
+      {
+        $push: {
+          notifications: {
+            text: `Sorry! You lost the wager "${poll.title}". We're sorry this happened to you but please remember - never stop betting! The only way to truly lose is to quit before your big win.`,
+          },
+        },
+      }
     );
 
     // Re-fetch user data to include updated bean amount and wins
@@ -361,6 +380,71 @@ exports.makeWagerIllegal = async (req, res, next) => {
     await creator.save();
 
     res.json({ message: "Bet made illegal" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.refundWager = async (req, res, next) => {
+  try {
+    const { pollId, userId, userKey } = req.body;
+
+    // Validate admin
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.role !== "admin")
+      return res.status(403).json({ message: "User is not an admin" });
+    if (user.password.slice(-10) !== userKey)
+      return res.status(403).json({ message: "Invalid key" });
+
+    // Find poll
+    const poll = await Poll.findById(pollId);
+    if (!poll) return res.status(404).json({ message: "Poll not found" });
+
+    // Refund all bettors
+    const userRefunds = new Map();
+    poll.options.forEach((option) => {
+      option.bettors.forEach((bettorId) => {
+        userRefunds.set(
+          bettorId,
+          (userRefunds.get(bettorId) || 0) + poll.pricePerShare
+        );
+      });
+    });
+
+    await Promise.all(
+      Array.from(userRefunds.entries()).map(async ([bettorId, refundAmt]) => {
+        await User.findByIdAndUpdate(bettorId, {
+          $inc: { beans: refundAmt },
+          $push: {
+            notifications: {
+              text: `Your bet in "${
+                poll.title
+              }" has been refunded. You received ${refundAmt.toLocaleString()} beans.`,
+            },
+          },
+        });
+      })
+    );
+
+    // Refund creator
+    const creator = await User.findById(poll.creatorId);
+    if (creator) {
+      creator.beans += poll.seed / 2;
+      creator.notifications.push({
+        text: `Your wager "${
+          poll.title
+        }" has been refunded. Your initial seed of ${(
+          poll.seed / 2
+        ).toLocaleString()} beans has been returned.`,
+      });
+      await creator.save();
+    }
+
+    // Delete poll
+    await Poll.findByIdAndDelete(pollId);
+
+    res.json({ message: "All bets refunded, wager deleted" });
   } catch (error) {
     next(error);
   }

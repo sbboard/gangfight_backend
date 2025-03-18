@@ -60,6 +60,9 @@ router.get("/admin/house-invites", (req, res, next) =>
 router.post("/admin/make-poll-illegal", (req, res, next) =>
   handleRequest(req, res, next, "users", pollController.makeWagerIllegal)
 );
+router.post("/admin/refund-wager", (req, res, next) =>
+  handleRequest(req, res, next, "users", pollController.refundWager)
+);
 
 // Store routes
 router.post("/store/buy-item", (req, res, next) =>
