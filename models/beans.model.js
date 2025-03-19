@@ -33,6 +33,7 @@ const pollSchema = new Schema({
     isLegal: { type: Boolean, default: true },
     lawsBroken: { type: [String], default: [] },
   },
+  betPerWager: { type: Number },
 });
 
 // User Schema

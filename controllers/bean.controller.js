@@ -14,7 +14,16 @@ exports.createPoll = async (req, res, next) => {
       options,
       pricePerShare,
       seed,
+      betPerWager,
     } = req.body;
+
+    if (betPerWager < 2) delete req.body.betPerWager;
+
+    if (betPerWager > Math.floor(options.length / 2)) {
+      return res.status(400).json({
+        message: "Bet per wager cannot exceed half the number of options",
+      });
+    }
 
     if (seed < pricePerShare) {
       return res
@@ -68,6 +77,7 @@ exports.createPoll = async (req, res, next) => {
       pricePerShare,
       seed: seed * 2,
       pot: seed * 2,
+      betPerWager,
     });
     await poll.save();
 
