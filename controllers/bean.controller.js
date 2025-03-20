@@ -17,7 +17,7 @@ exports.createPoll = async (req, res, next) => {
       betPerWager,
     } = req.body;
 
-    if (betPerWager < 2) delete req.body.betPerWager;
+    if (betPerWager < 2) delete betPerWager;
 
     if (betPerWager > Math.floor(options.length / 2)) {
       return res.status(400).json({
@@ -31,6 +31,13 @@ exports.createPoll = async (req, res, next) => {
         .json({ message: "Seed must be at least the price per share" });
     }
 
+    if (betPerWager && seed < pricePerShare * betPerWager) {
+      return res.status(400).json({
+        message:
+          "Seed must be at least the price per share times the bet per wager",
+      });
+    }
+
     if (options.length < 2) {
       return res
         .status(400)
@@ -41,7 +48,6 @@ exports.createPoll = async (req, res, next) => {
       return res.status(400).json({ message: "Maximum of 15 options allowed" });
     }
 
-    // Find the user and deduct 2 beans
     const user = await User.findById(creatorId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -66,7 +72,6 @@ exports.createPoll = async (req, res, next) => {
     user.beans -= seed;
     await user.save();
 
-    // Create the poll
     const poll = new Poll({
       creatorId,
       title,
