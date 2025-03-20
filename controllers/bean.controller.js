@@ -144,53 +144,82 @@ exports.getPollById = async (req, res, next) => {
 // Place a bet (vote) on an option using optionId
 exports.placeBet = async (req, res, next) => {
   try {
-    const { pollId, optionId, userId, shares } = req.body;
+    const { pollId, optionId, userId, shares, optionsArray } = req.body;
 
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    // Find the option by ID
-    const option = poll.options.find((opt) => opt._id.toString() === optionId);
-    if (!option) return res.status(400).json({ message: "Invalid option ID" });
-
     if (poll.endDate < Date.now())
       return res.status(400).json({ message: "Poll has ended" });
 
-    // Validate shares
     if (!shares || shares < 1)
       return res.status(400).json({ message: "Invalid number of shares" });
 
-    // Find the user and check if they have enough beans
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const totalCost = poll.pricePerShare * shares;
-    if (user.beans < totalCost) {
-      return res.status(400).json({ message: "Insufficient beans" });
+    if (poll.betPerWager && poll.betPerWager > 1) {
+      await placeMultipleBets(poll, user, optionsArray, shares);
+    } else {
+      await placeSingleBet(poll, user, optionId, shares);
     }
 
     if (user.role == "spectator" || !user.role) user.role = "bettor";
-
-    // Deduct beans and save the user
-    user.beans -= totalCost;
-
-    // Update the poll pot and add the user to the bettors array
-    poll.pot += totalCost;
-
-    // Add user to the bettors array as many times as shares bought
-    option.bettors.push(...Array(shares).fill(userId));
 
     res.json({
       message: "Bet placed successfully",
       poll: await sanitizePoll(poll, userId),
       newBeanAmt: user.beans,
     });
-
-    await poll.save();
-    await user.save();
   } catch (error) {
     next(error);
   }
+};
+
+const placeSingleBet = async (poll, user, optionId, shares) => {
+  const option = poll.options.find((opt) => opt._id.toString() === optionId);
+  if (!option) throw new Error("Invalid option ID");
+
+  const totalCost = poll.pricePerShare * shares;
+  if (user.beans < totalCost) {
+    return res.status(400).json({ message: "Insufficient beans" });
+  }
+
+  user.beans -= totalCost;
+  poll.pot += totalCost;
+
+  option.bettors.push(...Array(shares).fill(user._id));
+
+  await poll.save();
+  await user.save();
+};
+
+const placeMultipleBets = async (poll, user, optionsArray, shares) => {
+  if (!Array.isArray(optionsArray) || optionsArray.length === 0) {
+    throw new Error("Invalid options array");
+  }
+
+  if (optionsArray.length > poll.betPerWager) {
+    throw new Error("Invalid number of options");
+  }
+
+  const totalCost = optionsArray.length * poll.pricePerShare * shares;
+  if (user.beans < totalCost) {
+    return res.status(400).json({ message: "Insufficient beans" });
+  }
+
+  optionsArray.forEach((optionId) => {
+    const option = poll.options.find((opt) => opt._id.toString() === optionId);
+    if (!option) throw new Error("Invalid option ID");
+
+    option.bettors.push(...Array(shares).fill(user._id));
+  });
+
+  user.beans -= totalCost;
+  poll.pot += totalCost;
+
+  await poll.save();
+  await user.save();
 };
 
 // Set the winner of a poll
