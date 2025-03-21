@@ -19,6 +19,7 @@ const pollSchema = new Schema({
     },
   },
   winner: { type: String, default: null },
+  winners: { type: [String], default: [] },
   creationDate: { type: Date, default: Date.now },
   pricePerShare: { type: Number, default: 500000 },
   seed: { type: Number, default: 1000000 },

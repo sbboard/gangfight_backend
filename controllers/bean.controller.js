@@ -230,7 +230,7 @@ const placeMultipleBets = async (poll, user, optionsArray, shares) => {
 // Set the winner of a poll
 exports.setPollWinner = async (req, res, next) => {
   try {
-    const { pollId, optionId } = req.body;
+    const { pollId, optionId, optionsArray } = req.body;
 
     const poll = await Poll.findById(pollId);
     if (!poll || poll.winner) {
@@ -239,26 +239,87 @@ exports.setPollWinner = async (req, res, next) => {
         .json({ message: poll ? "Winner already set" : "Poll not found" });
     }
 
-    // Find the winning option
-    const winningOption = poll.options.find(
-      (opt) => opt._id.toString() === optionId
-    );
-    if (!winningOption)
-      return res.status(400).json({ message: "Invalid option ID" });
+    if (!optionId && !optionsArray) {
+      return res.status(400).json({ message: "No winner provided" });
+    }
 
-    // Set the winner and save
-    poll.winner = optionId;
-    await poll.save();
+    if (optionId) {
+      // Find the winning option
+      const winningOption = poll.options.find(
+        (opt) => opt._id.toString() === optionId
+      );
+      if (!winningOption)
+        return res.status(400).json({ message: "Invalid option ID" });
 
-    // Calculate total bets and winning bets
+      // Set the winner and save
+      poll.winner = optionId;
+      await poll.save();
+    } else {
+      // Find the winning options
+      const winningOptions = poll.options.filter((opt) =>
+        optionsArray.includes(opt._id.toString())
+      );
+      if (winningOptions.length === 0)
+        return res.status(400).json({ message: "Invalid option IDs" });
+
+      // Set the winner and save
+      poll.winners = optionsArray;
+      await poll.save();
+    }
+
     const totalBettors = poll.options.reduce(
       (sum, opt) => sum + opt.bettors.length,
       0
     );
-    const winningBettors = winningOption.bettors.length;
+
+    let winners = [];
+    if (optionId) winners = winningOption.bettors;
+    else if (optionsArray) {
+      //get the ids of everyone who voted on a losing option
+      const losingOptionIds = poll.options
+        .filter((opt) => !optionsArray.includes(opt._id.toString()))
+        .map((opt) => opt._id.toString());
+      const losingBettors = poll.options
+        .filter((opt) => losingOptionIds.includes(opt._id.toString()))
+        .flatMap((opt) => opt.bettors);
+
+      //get everyone who voted on a winning option
+      let winningVoters = poll.options.filter((opt) =>
+        optionsArray.includes(opt._id.toString())
+      );
+
+      //filter out the losing bettors from the winning bettors
+      const realWinners = winningVoters.map((opt) => {
+        return opt.bettors.filter((bettor) => !losingBettors.includes(bettor));
+      });
+
+      //unique winner ids
+      const uniqueWinners = [...new Set(realWinners.flat())];
+
+      //create an object to store how many arrays each uniqueWinner appears in
+      const winnerCount = {};
+      uniqueWinners.forEach((winner) => {
+        winnerCount[winner] = realWinners.filter((arr) =>
+          arr.includes(winner)
+        ).length;
+      });
+
+      //filter out anyone who has less than the max number of winning bets
+      const maxWinners = Object.keys(winnerCount).filter(
+        (winner) =>
+          winnerCount[winner] === Math.max(...Object.values(winnerCount))
+      );
+
+      //remove anyone not in the winners array from winningBettors
+      winningVoters = winningVoters.map((opt) => {
+        return opt.bettors.filter((bettor) => maxWinners.includes(bettor));
+      });
+
+      winners = winningVoters.flat();
+    }
 
     // If everyone won, refund their entry fee and exit
-    if (winningBettors === totalBettors) {
+    if (winners.length === totalBettors) {
       await User.updateMany(
         { _id: { $in: winningOption.bettors } },
         { $inc: { beans: poll.pricePerShare } }
@@ -277,7 +338,7 @@ exports.setPollWinner = async (req, res, next) => {
     }
 
     // If no one won, give the remaining jackpot to fallback user
-    if (winningBettors === 0) {
+    if (!winners.length) {
       await User.findByIdAndUpdate(HOUSE_ID, { $inc: { beans: jackpot } });
       return res.json({
         message: "No correct votes, jackpot given to the house",
@@ -287,10 +348,10 @@ exports.setPollWinner = async (req, res, next) => {
 
     // Track total payout per user
     const userPayouts = new Map();
-    winningOption.bettors.forEach((userId) => {
+    winners.forEach((userId) => {
       userPayouts.set(
         userId,
-        (userPayouts.get(userId) || 0) + Math.floor(jackpot / winningBettors)
+        (userPayouts.get(userId) || 0) + Math.floor(jackpot / winners.length)
       );
     });
 
@@ -462,9 +523,9 @@ exports.refundWager = async (req, res, next) => {
           $inc: { beans: refundAmt },
           $push: {
             notifications: {
-              text: `Your bet in "${
+              text: `The wager "${
                 poll.title
-              }" has been refunded. You received ${refundAmt.toLocaleString()} beans.`,
+              }" has been refunded. The ${refundAmt.toLocaleString()} beans you bet have been returned to your bean bag.`,
             },
           },
         });
