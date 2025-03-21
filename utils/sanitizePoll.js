@@ -27,7 +27,7 @@ const sanitizePoll = async (poll, requestingUserId) => {
   sanitizedPoll.options = sanitizedPoll.options.map((option) => ({
     ...option,
     bettors: option.bettors.map((bettorId) =>
-      bettorId === requestingUserId ? bettorId : "dummy"
+      bettorId === requestingUserId ? bettorId : userCache[bettorId.toString()]
     ),
   }));
 
