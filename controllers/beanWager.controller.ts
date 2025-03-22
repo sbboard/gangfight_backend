@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { Bettor, Poll, PollOption, User } from "../models/beans.model";
-import sanitizePoll from "../utils/sanitizePoll";
-import sanitizeUser from "../utils/sanitizeUser";
+import { Bettor, Poll, PollOption, User } from "../models/beans.model.js";
+import sanitizePoll from "../utils/sanitizePoll.js";
+import sanitizeUser from "../utils/sanitizeUser.js";
 import dotenv from "dotenv";
 dotenv.config();
 

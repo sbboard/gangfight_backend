@@ -1,6 +1,6 @@
 import express from "express";
-import * as productController from "../controllers/content.controller";
-import * as patreonController from "../controllers/patreon.controller";
+import * as productController from "../controllers/content.controller.js";
+import * as patreonController from "../controllers/patreon.controller.js";
 import dotenv from "dotenv";
 dotenv.config();
 

@@ -1,8 +1,9 @@
-import mongoose, { Document, Schema, Model } from "mongoose";
+import mongoose from "mongoose";
+const { Schema } = mongoose;
 
-mongoose.set("strictQuery", false); // `useFindAndModify` is deprecated in Mongoose 6+
+mongoose.set("strictQuery", false);
 
-export interface GangContent extends Document {
+export interface GangContent extends mongoose.Document {
   title: string;
   subtitle?: string;
   img: string;
@@ -26,11 +27,11 @@ const GangContentSchema = new Schema<GangContent>({
   updatedDate: { type: Date, required: true },
   series: { type: String },
   assetFolder: { type: String },
-  comicsArray: { type: [Schema.Types.Mixed] }, // Allows different data types in the array
+  comicsArray: { type: [Schema.Types.Mixed] },
   iframe: { type: Boolean, default: false },
 });
 
-const GangContentModel: Model<GangContent> = mongoose.model<GangContent>(
+const GangContentModel = mongoose.model<GangContent>(
   "content",
   GangContentSchema
 );

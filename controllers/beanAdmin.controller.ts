@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { Bettor, InventoryItem, Poll, User } from "../models/beans.model";
-import { generateUniqueInviteCode } from "../utils/invite";
+import { Bettor, InventoryItem, Poll, User } from "../models/beans.model.js";
+import { generateUniqueInviteCode } from "../utils/invite.js";
 
 const HOUSE_ID = "house_account_id"; // Replace with actual house account ID
 

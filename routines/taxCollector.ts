@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { User, Poll } from "../models/beans.model";
+import { User, Poll } from "../models/beans.model.js";
 import dotenv from "dotenv";
 dotenv.config();
 

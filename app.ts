@@ -3,9 +3,9 @@ import fileUpload from "express-fileupload";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import product from "./routes/content.route";
-import beanRoutes from "./routes/bean.route";
-import startTaxSchedule from "./routines/taxCollector";
+import product from "./routes/content.route.js";
+import beanRoutes from "./routes/bean.route.js";
+import startTaxSchedule from "./routines/taxCollector.js";
 
 dotenv.config();
 

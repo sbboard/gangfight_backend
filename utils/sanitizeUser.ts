@@ -1,4 +1,4 @@
-import { Bettor } from "../models/beans.model"; // Correct the import path
+import { Bettor } from "../models/beans.model.js";
 import { LeanDocument } from "mongoose";
 
 export const sanitizeUser = (user: Bettor): Bettor => {

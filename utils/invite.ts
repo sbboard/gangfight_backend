@@ -1,5 +1,5 @@
-import { ITEMS } from "../constants/items";
-import { User } from "../models/beans.model";
+import { ITEMS } from "../constants/items.js";
+import { User } from "../models/beans.model.js";
 
 export const generateUniqueInviteCode = async () => {
   let code = "";

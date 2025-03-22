@@ -1,9 +1,8 @@
-import express, { Request, Response, NextFunction } from "express";
-import { Router } from "express";
-import * as adminController from "../controllers/beanAdmin.controller";
-import * as storeController from "../controllers/beanStore.controller";
-import * as wagerController from "../controllers/beanWager.controller";
-import * as userController from "../controllers/beanUser.controller";
+import express, { Request, Response, NextFunction, Router } from "express";
+import * as adminController from "../controllers/beanAdmin.controller.js";
+import * as storeController from "../controllers/beanStore.controller.js";
+import * as wagerController from "../controllers/beanWager.controller.js";
+import * as userController from "../controllers/beanUser.controller.js";
 
 // Define the structure of the database and collection for type safety
 interface BeansDb {

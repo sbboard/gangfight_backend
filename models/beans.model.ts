@@ -1,13 +1,15 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose from "mongoose";
+
+const { Schema } = mongoose; // Destructure Schema from the default import
 
 // Poll Option Schema Interface
-export interface PollOption extends Document {
+export interface PollOption extends mongoose.Document {
   text: string;
   bettors: string[];
 }
 
 // Poll Schema Interface
-interface Poll extends Document {
+interface Poll extends mongoose.Document {
   creatorId?: string;
   creatorName?: string;
   title: string;
@@ -30,7 +32,7 @@ interface Poll extends Document {
 }
 
 // User Schema Interface
-export interface Bettor extends Document {
+export interface Bettor extends mongoose.Document {
   name: string;
   lastIP?: string;
   debt: number;
@@ -54,7 +56,7 @@ interface Notification {
 }
 
 // Inventory Item Schema Interface
-export interface InventoryItem extends Document {
+export interface InventoryItem extends mongoose.Document {
   name: string;
   meta: string;
   specialDescription?: string;

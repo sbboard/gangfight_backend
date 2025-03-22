@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { User, Bettor, InventoryItem } from "../models/beans.model";
-import { generateUniqueInviteCode } from "../utils/invite";
-import { sanitizeUser } from "../utils/sanitizeUser";
-import { ITEMS } from "../constants/items";
+import { User, Bettor, InventoryItem } from "../models/beans.model.js";
+import { generateUniqueInviteCode } from "../utils/invite.js";
+import { sanitizeUser } from "../utils/sanitizeUser.js";
+import { ITEMS } from "../constants/items.js";
 import dotenv from "dotenv";
 dotenv.config();
 

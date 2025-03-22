@@ -1,4 +1,4 @@
-import { PollOption, User } from "../models/beans.model";
+import { PollOption, User } from "../models/beans.model.js";
 import { Bettor, Poll } from "../models/beans.model";
 
 let userCache: Record<string, string> = {};

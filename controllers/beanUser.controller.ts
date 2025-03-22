@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import mongoose from "mongoose";
-import { User } from "../models/beans.model";
-import sanitizeUser from "../utils/sanitizeUser";
+import { User } from "../models/beans.model.js";
+import sanitizeUser from "../utils/sanitizeUser.js";
 import dotenv from "dotenv";
 dotenv.config();
 

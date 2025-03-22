@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import fs from "fs";
 import path from "path";
-import Product from "../models/content.model";
+import Product from "../models/content.model.js";
 import { UploadedFile } from "express-fileupload";
 
 const searchIdPromise = (id: string) => Product.find({ _id: id }).exec();
