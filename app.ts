@@ -1,8 +1,11 @@
-const express = require("express");
-const fileUpload = require("express-fileupload");
-const bodyParser = require("body-parser");
+import express from "express";
+import fileUpload from "express-fileupload";
+import dotenv from "dotenv";
+import bodyParser from "body-parser";
+
 const mongoose = require("mongoose");
-const MONDO_SECRET = require("./mondosecret.js");
+dotenv.config();
+const MONDO_SECRET = process.env.MONDO_SECRET;
 const startTaxSchedule = require("./taxCollector"); // Import tax system
 
 const mongoDB = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
