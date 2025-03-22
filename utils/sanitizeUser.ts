@@ -1,14 +1,15 @@
-const sanitizeUser = (user) => {
-  if (!user) return null;
+import { Bettor } from "../models/beans.model"; // Correct the import path
+import { LeanDocument } from "mongoose";
 
-  const sanitizedUser = user.toObject ? user.toObject() : { ...user };
+export const sanitizeUser = (user: Bettor): Bettor => {
+  const sanitizedUser = user.toObject
+    ? (user.toObject() as LeanDocument<Bettor>)
+    : { ...user };
 
-  // Remove sensitive fields
   delete sanitizedUser.password;
   delete sanitizedUser.referrer;
-  delete sanitizedUser.password;
 
-  return sanitizedUser;
+  return sanitizedUser as Bettor;
 };
 
-module.exports = sanitizeUser;
+export default sanitizeUser;

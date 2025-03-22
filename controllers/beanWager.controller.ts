@@ -1,9 +1,18 @@
-const { Poll, User } = require("../models/beans.model.js");
-const sanitizePoll = require("../utils/sanitizePoll.js");
-const sanitizeUser = require("../utils/sanitizeUser.js");
+import { Request, Response, NextFunction } from "express";
+import { Bettor, Poll, PollOption, User } from "../models/beans.model";
+import sanitizePoll from "../utils/sanitizePoll";
+import sanitizeUser from "../utils/sanitizeUser";
+import dotenv from "dotenv";
+dotenv.config();
+
+const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 
 // Create a new poll
-exports.createPoll = async (req, res, next) => {
+export const createPoll = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const {
       creatorId,
@@ -17,7 +26,11 @@ exports.createPoll = async (req, res, next) => {
       betPerWager,
     } = req.body;
 
-    if (betPerWager < 2) delete betPerWager;
+    if (betPerWager && betPerWager < 2) {
+      return res.status(400).json({
+        message: "Bet per wager must be at least 2",
+      });
+    }
 
     if (betPerWager > Math.floor(options.length / 2)) {
       return res.status(400).json({
@@ -65,7 +78,7 @@ exports.createPoll = async (req, res, next) => {
         .json({ message: "User does not have a bookie license" });
     }
 
-    if (user.role == "spectator" || user.role == "bettor" || !user.role) {
+    if (user.role === "spectator" || user.role === "bettor" || !user.role) {
       user.role = "bookie";
     }
 
@@ -96,7 +109,7 @@ exports.createPoll = async (req, res, next) => {
         } BET HAS BEEN STARTED: ${title}`,
       };
       await User.updateMany(
-        { userType: "user" },
+        { contentType: "user" },
         { $push: { notifications: notification } }
       );
     }
@@ -111,15 +124,17 @@ exports.createPoll = async (req, res, next) => {
 };
 
 // Get all polls
-exports.getAllPolls = async (req, res, next) => {
+export const getAllPolls = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId } = req.query;
-    const polls = await Poll.find({ contentType: "poll" })
-      .sort("endDate")
-      .lean();
+    const polls = await Poll.find({ contentType: "poll" }).sort("endDate");
 
     const cleanedPolls = await Promise.all(
-      polls.map((poll) => sanitizePoll(poll, userId))
+      polls.map((poll) => sanitizePoll(poll, userId as string))
     );
 
     res.json(cleanedPolls);
@@ -129,7 +144,11 @@ exports.getAllPolls = async (req, res, next) => {
 };
 
 // Get a specific poll by ID
-exports.getPollById = async (req, res, next) => {
+export const getPollById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId } = req.query;
     const { pollId } = req.params;
@@ -140,22 +159,27 @@ exports.getPollById = async (req, res, next) => {
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    res.json(await sanitizePoll(poll, userId));
+    res.json(await sanitizePoll(poll, userId as string));
   } catch (error) {
     next(error);
   }
 };
 
 // Place a bet (vote) on an option using optionId
-exports.placeBet = async (req, res, next) => {
+export const placeBet = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { pollId, optionId, userId, shares, optionsArray } = req.body;
 
     const poll = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    if (poll.endDate < Date.now())
+    if (poll.endDate.getTime() < Date.now()) {
       return res.status(400).json({ message: "Poll has ended" });
+    }
 
     if (!shares || shares < 1)
       return res.status(400).json({ message: "Invalid number of shares" });
@@ -169,11 +193,11 @@ exports.placeBet = async (req, res, next) => {
       await placeSingleBet(poll, user, optionId, shares);
     }
 
-    if (user.role == "spectator" || !user.role) user.role = "bettor";
+    if (user.role === "spectator" || !user.role) user.role = "bettor";
 
     res.json({
       message: "Bet placed successfully",
-      poll: await sanitizePoll(poll, userId),
+      poll: await sanitizePoll(poll, userId as string),
       newBeanAmt: user.beans,
     });
   } catch (error) {
@@ -181,13 +205,18 @@ exports.placeBet = async (req, res, next) => {
   }
 };
 
-const placeSingleBet = async (poll, user, optionId, shares) => {
+const placeSingleBet = async (
+  poll: Poll,
+  user: Bettor,
+  optionId: string,
+  shares: number
+) => {
   const option = poll.options.find((opt) => opt._id.toString() === optionId);
   if (!option) throw new Error("Invalid option ID");
 
   const totalCost = poll.pricePerShare * shares;
   if (user.beans < totalCost) {
-    return res.status(400).json({ message: "Insufficient beans" });
+    return { message: "Insufficient beans" };
   }
 
   user.beans -= totalCost;
@@ -199,18 +228,23 @@ const placeSingleBet = async (poll, user, optionId, shares) => {
   await user.save();
 };
 
-const placeMultipleBets = async (poll, user, optionsArray, shares) => {
+const placeMultipleBets = async (
+  poll: Poll,
+  user: Bettor,
+  optionsArray: string[],
+  shares: number
+) => {
   if (!Array.isArray(optionsArray) || optionsArray.length === 0) {
     throw new Error("Invalid options array");
   }
 
-  if (optionsArray.length > poll.betPerWager) {
+  if (poll.betPerWager && optionsArray.length > poll.betPerWager) {
     throw new Error("Invalid number of options");
   }
 
   const totalCost = optionsArray.length * poll.pricePerShare * shares;
   if (user.beans < totalCost) {
-    return res.status(400).json({ message: "Insufficient beans" });
+    return { message: "Insufficient beans" };
   }
 
   optionsArray.forEach((optionId) => {
@@ -227,10 +261,18 @@ const placeMultipleBets = async (poll, user, optionsArray, shares) => {
   await user.save();
 };
 
-// Set the winner of a poll
-exports.setPollWinner = async (req, res, next) => {
+export const setPollWinner = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<Response | void> => {
   try {
-    const { pollId, optionId, optionsArray } = req.body;
+    const {
+      pollId,
+      optionId,
+      optionsArray,
+    }: { pollId: string; optionId?: string; optionsArray?: string[] } =
+      req.body;
 
     const poll = await Poll.findById(pollId);
     if (!poll || poll.winner) {
@@ -239,13 +281,10 @@ exports.setPollWinner = async (req, res, next) => {
         .json({ message: poll ? "Winner already set" : "Poll not found" });
     }
 
-    if (!optionId && !optionsArray) {
-      return res.status(400).json({ message: "No winner provided" });
-    }
-
+    let winningOption: PollOption | undefined;
     if (optionId) {
       // Find the winning option
-      const winningOption = poll.options.find(
+      winningOption = poll.options.find(
         (opt) => opt._id.toString() === optionId
       );
       if (!winningOption)
@@ -254,7 +293,7 @@ exports.setPollWinner = async (req, res, next) => {
       // Set the winner and save
       poll.winner = optionId;
       await poll.save();
-    } else {
+    } else if (optionsArray) {
       // Find the winning options
       const winningOptions = poll.options.filter((opt) =>
         optionsArray.includes(opt._id.toString())
@@ -265,6 +304,8 @@ exports.setPollWinner = async (req, res, next) => {
       // Set the winner and save
       poll.winners = optionsArray;
       await poll.save();
+    } else {
+      return res.status(400).json({ message: "No winner provided" });
     }
 
     const totalBettors = poll.options.reduce(
@@ -272,10 +313,10 @@ exports.setPollWinner = async (req, res, next) => {
       0
     );
 
-    let winners = [];
-    if (optionId) winners = winningOption.bettors;
+    let winners: string[] = [];
+    if (optionId) winners = winningOption!.bettors;
     else if (optionsArray) {
-      //get the ids of everyone who voted on a losing option
+      // get the ids of everyone who voted on a losing option
       const losingOptionIds = poll.options
         .filter((opt) => !optionsArray.includes(opt._id.toString()))
         .map((opt) => opt._id.toString());
@@ -283,45 +324,45 @@ exports.setPollWinner = async (req, res, next) => {
         .filter((opt) => losingOptionIds.includes(opt._id.toString()))
         .flatMap((opt) => opt.bettors);
 
-      //get everyone who voted on a winning option
+      // get everyone who voted on a winning option
       let winningVoters = poll.options.filter((opt) =>
         optionsArray.includes(opt._id.toString())
       );
 
-      //filter out the losing bettors from the winning bettors
+      // filter out the losing bettors from the winning bettors
       const realWinners = winningVoters.map((opt) => {
         return opt.bettors.filter((bettor) => !losingBettors.includes(bettor));
       });
 
-      //unique winner ids
+      // unique winner ids
       const uniqueWinners = [...new Set(realWinners.flat())];
 
-      //create an object to store how many arrays each uniqueWinner appears in
-      const winnerCount = {};
+      // create an object to store how many arrays each uniqueWinner appears in
+      const winnerCount: { [key: string]: number } = {};
       uniqueWinners.forEach((winner) => {
         winnerCount[winner] = realWinners.filter((arr) =>
           arr.includes(winner)
         ).length;
       });
 
-      //filter out anyone who has less than the max number of winning bets
+      // filter out anyone who has less than the max number of winning bets
       const maxWinners = Object.keys(winnerCount).filter(
         (winner) =>
           winnerCount[winner] === Math.max(...Object.values(winnerCount))
       );
 
-      //remove anyone not in the winners array from winningBettors
-      winningVoters = winningVoters.map((opt) => {
+      // remove anyone not in the winners array from winningBettors
+      const winningVotesExclusive = winningVoters.map((opt) => {
         return opt.bettors.filter((bettor) => maxWinners.includes(bettor));
       });
 
-      winners = winningVoters.flat();
+      winners = winningVotesExclusive.flat();
     }
 
     // If everyone won, refund their entry fee and exit
     if (winners.length === totalBettors) {
       await User.updateMany(
-        { _id: { $in: winningOption.bettors } },
+        { _id: { $in: winningOption!.bettors } },
         { $inc: { beans: poll.pricePerShare } }
       );
       return res.json({ message: "All bettors refunded, no winner recorded" });
@@ -347,7 +388,7 @@ exports.setPollWinner = async (req, res, next) => {
     }
 
     // Track total payout per user
-    const userPayouts = new Map();
+    const userPayouts = new Map<string, number>();
     winners.forEach((userId) => {
       userPayouts.set(
         userId,
@@ -390,166 +431,16 @@ exports.setPollWinner = async (req, res, next) => {
     );
 
     // Re-fetch user data to include updated bean amount and wins
-    const updatedCreator = await User.findById(creator._id);
+    const updatedCreator = await User.findById(creator?._id);
+
+    if (!updatedCreator) {
+      return res.status(404).json({ message: "Creator not found" });
+    }
 
     res.json({
       message: "Winner set, creator paid, jackpot distributed",
       user: sanitizeUser(updatedCreator),
     });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.makeWagerIllegal = async (req, res, next) => {
-  try {
-    const { pollId, userId, userKey, lawsBroken } = req.body;
-
-    // Fetch user and validate admin role
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.role !== "admin")
-      return res.status(403).json({ message: "User is not an admin" });
-    if (user.password.slice(-10) !== userKey)
-      return res.status(403).json({ message: "Invalid key" });
-
-    // Fetch poll and validate existence
-    const poll = await Poll.findById(pollId);
-    if (!poll) return res.status(404).json({ message: "Poll not found" });
-
-    // if poll is already illegal, return
-    if (!poll.legalStatus.isLegal)
-      return res.status(400).json({ message: "Wager already illegal" });
-
-    //if poll is already settled, return
-    if (poll.winner)
-      return res.status(400).json({ message: "Wager already settled" });
-
-    //if poll is already ended, return
-    if (poll.endDate < Date.now())
-      return res.status(400).json({ message: "Wager already ended" });
-
-    //set End Date and settle date to now
-    poll.endDate = Date.now();
-    poll.settleDate = Date.now();
-
-    // Mark poll as illegal
-    poll.legalStatus = {
-      isLegal: false,
-      lawsBroken: lawsBroken.split(",").map((law) => law.trim()),
-      dateBanned: new Date(),
-    };
-    await poll.save();
-
-    // Fetch creator
-    const creator = await User.findById(poll.creatorId);
-    if (!creator) return res.status(404).json({ message: "Creator not found" });
-
-    // Notify bettors
-    const notification = {
-      text: `ALERT: You are a victim! You bet in the wager "${poll.title}" which was found to be an illegal wager. 
-      The wager has been closed, but ${creator.name} successfully stole all the beans associated with it.`,
-    };
-
-    await User.updateMany(
-      { _id: { $in: poll.options.flatMap((opt) => opt.bettors) } },
-      { $push: { notifications: notification } }
-    );
-
-    // Apply penalty and possible role change
-    creator.penalties = (creator.penalties || 0) + 1;
-    if (creator.penalties >= 3) {
-      creator.role = "racketeer";
-    }
-
-    // Remove bookie license if present
-    creator.inventory = creator.inventory.filter(
-      (item) => item.name !== "bookie license"
-    );
-
-    // Notify creator
-    const creatorNotification = {
-      text:
-        `Your wager "${poll.title}" was found to be illegal due to breaking the following laws: ${lawsBroken}.` +
-        ` You did, however, successfully steal all ${poll.pot.toLocaleString()} beans associated with your illegal wager.` +
-        (creator.penalties >= 3
-          ? " You have been labeled a racketeer due to repeated offenses."
-          : ""),
-    };
-    creator.notifications.push(creatorNotification);
-
-    // Reward creator with the pot
-    creator.beans += poll.pot;
-
-    // Save creator changes
-    await creator.save();
-
-    res.json({ message: "Bet made illegal" });
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.refundWager = async (req, res, next) => {
-  try {
-    const { pollId, userId, userKey } = req.body;
-
-    // Validate admin
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    if (user.role !== "admin")
-      return res.status(403).json({ message: "User is not an admin" });
-    if (user.password.slice(-10) !== userKey)
-      return res.status(403).json({ message: "Invalid key" });
-
-    // Find poll
-    const poll = await Poll.findById(pollId);
-    if (!poll) return res.status(404).json({ message: "Poll not found" });
-
-    // Refund all bettors
-    const userRefunds = new Map();
-    poll.options.forEach((option) => {
-      option.bettors.forEach((bettorId) => {
-        userRefunds.set(
-          bettorId,
-          (userRefunds.get(bettorId) || 0) + poll.pricePerShare
-        );
-      });
-    });
-
-    await Promise.all(
-      Array.from(userRefunds.entries()).map(async ([bettorId, refundAmt]) => {
-        await User.findByIdAndUpdate(bettorId, {
-          $inc: { beans: refundAmt },
-          $push: {
-            notifications: {
-              text: `The wager "${
-                poll.title
-              }" has been refunded. The ${refundAmt.toLocaleString()} beans you bet have been returned to your bean bag.`,
-            },
-          },
-        });
-      })
-    );
-
-    // Refund creator
-    const creator = await User.findById(poll.creatorId);
-    if (creator) {
-      creator.beans += poll.seed / 2;
-      creator.notifications.push({
-        text: `Your wager "${
-          poll.title
-        }" has been refunded. Your initial seed of ${(
-          poll.seed / 2
-        ).toLocaleString()} beans has been returned.`,
-      });
-      await creator.save();
-    }
-
-    // Delete poll
-    await Poll.findByIdAndDelete(pollId);
-
-    res.json({ message: "All bets refunded, wager deleted" });
   } catch (error) {
     next(error);
   }

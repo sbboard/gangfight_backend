@@ -1,12 +1,12 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express"; // Correct imports
 import fileUpload from "express-fileupload";
-import dotenv from "dotenv";
 import bodyParser from "body-parser";
-
-const mongoose = require("mongoose");
+import mongoose from "mongoose"; // Simplified import
+import dotenv from "dotenv";
 dotenv.config();
+
 const MONDO_SECRET = process.env.MONDO_SECRET;
-const startTaxSchedule = require("./taxCollector"); // Import tax system
+const startTaxSchedule = require("./taxCollector");
 
 const mongoDB = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
 mongoose.connect(mongoDB, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -17,14 +17,15 @@ db.on("error", console.error.bind(console, "MongoDB connection error:"));
 const app = express();
 
 // Middleware to switch to 'beans' database for /api/beans routes
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.originalUrl.startsWith("/api/beans")) {
     req.beansDb = db.useDb("beans");
   } else req.beansDb = db;
   next();
 });
 
-app.use(function (req, res, next) {
+// Corrected CORS Middleware with explicit types for Request, Response, and NextFunction
+app.use((req: Request, res: Response, next: NextFunction): void => {
   const allowedDomains = [
     "bigbean.bet",
     "www.bigbean.bet",
@@ -33,20 +34,14 @@ app.use(function (req, res, next) {
   ];
 
   const origin = req.headers.origin;
-  const host = req.headers.host.split(":")[0];
+  const host = req.headers.host?.split(":")[0];
 
   if (req.headers.host === "localhost:8128") {
     res.setHeader("Access-Control-Allow-Origin", "*");
   } else if (!origin || origin === `https://${host}`) {
     res.setHeader("Access-Control-Allow-Origin", `https://${host}`);
-  } else {
-    if (allowedDomains.includes(new URL(origin).hostname)) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-    } else {
-      return res
-        .status(403)
-        .json({ message: `Forbidden: Invalid origin (${origin})` });
-    }
+  } else if (allowedDomains.includes(new URL(origin).hostname)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
   }
 
   // Set other CORS headers

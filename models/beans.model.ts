@@ -1,20 +1,81 @@
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
+import mongoose, { Document, Schema } from "mongoose";
 
-const pollOptionSchema = new Schema({
+// Poll Option Schema Interface
+export interface PollOption extends Document {
+  text: string;
+  bettors: string[];
+}
+
+// Poll Schema Interface
+interface Poll extends Document {
+  creatorId?: string;
+  creatorName?: string;
+  title: string;
+  description: string;
+  endDate: Date;
+  settleDate: Date;
+  winner: string | null;
+  winners: string[];
+  creationDate: Date;
+  pricePerShare: number;
+  seed: number;
+  pot: number;
+  options: PollOption[];
+  contentType: string;
+  legalStatus: {
+    isLegal: boolean;
+    lawsBroken: string[];
+  };
+  betPerWager?: number;
+}
+
+// User Schema Interface
+export interface Bettor extends Document {
+  name: string;
+  lastIP?: string;
+  debt: number;
+  password?: string;
+  role: string;
+  inventory: InventoryItem[];
+  beans: number;
+  registrationDate: Date;
+  wins: string[]; // Store poll IDs as strings
+  referrer?: string | null;
+  contentType: string;
+  notifications: Notification[];
+  notificationsLastChecked?: Date;
+  penalties: number;
+}
+
+// Notification Schema Interface
+interface Notification {
+  text: string;
+  date: Date;
+}
+
+// Inventory Item Schema Interface
+interface InventoryItem {
+  name: string;
+  meta: string;
+  specialDescription?: string;
+  specialPrice?: number;
+}
+
+// Poll Option Schema
+const pollOptionSchema = new Schema<PollOption>({
   text: { type: String, required: true },
   bettors: [{ type: String, required: true }],
 });
 
 // Poll Schema
-const pollSchema = new Schema({
+const pollSchema = new Schema<Poll>({
   creatorId: { type: String, required: true }, // Store user ID as a string
   title: { type: String, required: true },
   description: { type: String, required: true },
   endDate: { type: Date, required: true },
   settleDate: {
     type: Date,
-    default: function () {
+    default: function (this: Poll) {
       return this.endDate;
     },
   },
@@ -37,20 +98,22 @@ const pollSchema = new Schema({
   betPerWager: { type: Number },
 });
 
-// User Schema
-const notificationSchema = new Schema({
+// Notification Schema
+const notificationSchema = new Schema<Notification>({
   text: { type: String, required: true },
   date: { type: Date, default: Date.now },
 });
 
-const inventoryItemSchema = new Schema({
+// Inventory Item Schema
+const inventoryItemSchema = new Schema<InventoryItem>({
   name: { type: String, required: true },
   meta: { type: String, default: "" },
   specialDescription: { type: String },
   specialPrice: { type: Number },
 });
 
-const userSchema = new Schema({
+// User Schema
+const userSchema = new Schema<Bettor>({
   name: { type: String, required: true },
   lastIP: { type: String },
   debt: { type: Number, default: 0 },
@@ -72,8 +135,12 @@ const userSchema = new Schema({
 });
 
 // Export models
-module.exports = {
-  User: mongoose.model("User", userSchema, "beans"),
-  Poll: mongoose.model("Poll", pollSchema, "beans"),
-  Item: mongoose.model("Item", inventoryItemSchema, "beans"),
-};
+const User = mongoose.model<Bettor>("User", userSchema, "beans");
+const Poll = mongoose.model<Poll>("Poll", pollSchema, "beans");
+const Item = mongoose.model<InventoryItem>(
+  "Item",
+  inventoryItemSchema,
+  "beans"
+);
+
+export { User, Poll, Item };
