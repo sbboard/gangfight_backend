@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "lib": ["ES2019", "DOM"],
+    "module": "ESNext",
+    "strict": true,
+    "sourceMap": false,
+    "noImplicitOverride": true,
+    "types": ["node"],
+    "useDefineForClassFields": false,
+    "moduleResolution": "node",
+    "removeComments": true,
+    "skipLibCheck": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "target": "ESNext"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
