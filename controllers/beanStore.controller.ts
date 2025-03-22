@@ -1,56 +1,66 @@
-exports.runLottery = async (req, res, next) => {
-  try {
-    const LOTTO_PRICE = 10000;
-    const { userId } = req.body;
+import { Request, Response, NextFunction } from "express";
+import { User, Bettor, InventoryItem } from "../models/beans.model";
+import { generateUniqueInviteCode } from "../utils/invite";
+import { sanitizeUser } from "../utils/sanitizeUser";
+import { ITEMS } from "../constants/items";
+import dotenv from "dotenv";
+dotenv.config();
 
+const HOUSE_ID = process.env.HOUSE_ID;
+
+const LOTTO_PRICE = 10_000;
+
+export const runLottery = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId } = req.body;
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Deduct beans for lottery participation
-    if (user.beans < LOTTO_PRICE)
+    if (user.beans < LOTTO_PRICE) {
       return res
         .status(400)
         .json({ message: "Not enough beans to participate" });
+    }
 
     user.beans -= LOTTO_PRICE;
     await user.save();
 
     const isWinner = Math.random() < 1 / 100000;
-
     let house = await User.findById(HOUSE_ID);
-    if (!house) {
+    if (!house)
       return res.status(404).json({ message: "Lottery account not found" });
-    }
 
-    let message;
+    let message: string;
     let wonBeans = 0;
 
     if (isWinner) {
       wonBeans = house.beans;
       user.beans += wonBeans;
-      house.beans = 10000000;
-      await house.save();
-      await user.save();
+      house.beans = 10_000_000;
+      await Promise.all([house.save(), user.save()]);
       message = `Congratulations! You won ${wonBeans} beans!`;
 
-      //send all users a notification that user won the lottery
       const users = await User.find({ contentType: "user" });
-      users.forEach(async (u) => {
-        if (!u.notifications) u.notifications = [];
-        u.notifications.push({
-          text: `${
-            user.name
-          } won the lottery! The jackpot was ${wonBeans.toLocaleString()}.`,
-        });
-        await u.save();
-      });
+      await Promise.all(
+        users.map(async (u: Bettor) => {
+          u.notifications = u.notifications || [];
+          u.notifications.push({
+            text: `${
+              user.name
+            } won the lottery! The jackpot was ${wonBeans.toLocaleString()}.`,
+          });
+          await u.save();
+        })
+      );
     } else {
       house.beans += LOTTO_PRICE;
       await house.save();
       message = "Better luck next time!";
     }
-
-    house = await User.findById(HOUSE_ID);
 
     res.json({
       message,
@@ -62,12 +72,15 @@ exports.runLottery = async (req, res, next) => {
   }
 };
 
-exports.getJackpot = async (req, res, next) => {
+export const getJackpot = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const house = await User.findById(HOUSE_ID);
-    if (!house) {
+    if (!house)
       return res.status(404).json({ message: "House account not found" });
-    }
 
     res.json({ jackpot: house.beans ?? 0 });
   } catch (error) {
@@ -75,51 +88,11 @@ exports.getJackpot = async (req, res, next) => {
   }
 };
 
-// STORE
-const ITEMS = {
-  invite: {
-    price: 20000000,
-    generateMeta: () =>
-      Math.random()
-        .toString(36)
-        .substring(2, 7)
-        .replace(/[0-9]/g, "")
-        .toUpperCase(),
-  },
-  "bookie license": { price: 11000000, generateMeta: () => "" },
-  adblock: { price: 1000000, generateMeta: () => "" },
-  "magic beans": {
-    price: 100000000,
-    generateMeta: () => "",
-    maintainsValue: true,
-  },
-  "shield of turin": {
-    price: 250000000,
-    generateMeta: () => "",
-    maintainsValue: true,
-  },
-  head: { price: 500000000, generateMeta: () => "", maintainsValue: true },
-  demon: { price: 1000000000, generateMeta: () => "", maintainsValue: true },
-};
-
-const generateUniqueInviteCode = async () => {
-  let code;
-  let isDuplicate = true;
-
-  while (isDuplicate) {
-    code = ITEMS.invite.generateMeta();
-    const existingInvite = await User.findOne({
-      "inventory.name": "invite",
-      "inventory.meta": code,
-    });
-
-    if (!existingInvite) isDuplicate = false;
-  }
-
-  return code;
-};
-
-exports.buyItem = async (req, res, next) => {
+export const buyItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId, itemName } = req.body;
     const item = ITEMS[itemName.toLowerCase()];
@@ -134,23 +107,23 @@ exports.buyItem = async (req, res, next) => {
         .json({ message: "You can't buy a bookie license" });
     }
 
-    if (user.debt > 0)
+    if (user.debt > 0) {
       return res
         .status(400)
         .json({ message: "You can't buy items while in debt" });
-
-    if (user.beans < item.price)
-      return res.status(400).json({ message: "Not enough beans" });
-
-    let meta = "";
-    if (itemName.toLowerCase() === "invite") {
-      meta = await generateUniqueInviteCode();
-    } else {
-      meta = item.generateMeta();
     }
 
+    if (user.beans < item.price) {
+      return res.status(400).json({ message: "Not enough beans" });
+    }
+
+    const meta =
+      itemName.toLowerCase() === "invite"
+        ? await generateUniqueInviteCode()
+        : item.generateMeta();
+
     user.beans -= item.price;
-    user.inventory.push({ name: itemName, meta });
+    user.inventory.push({ name: itemName, meta } as InventoryItem);
     await user.save();
 
     res.json({ message: "Item purchased", user: sanitizeUser(user) });
@@ -159,14 +132,18 @@ exports.buyItem = async (req, res, next) => {
   }
 };
 
-exports.sendBeans = async (req, res, next) => {
+export const sendBeans = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId, userKey, recipientName, message, amount } = req.body;
 
     let sender = await User.findById(userId);
     if (!sender) return res.status(404).json({ message: "User not found" });
 
-    if (sender.password.slice(-10) !== userKey) {
+    if (sender.password?.slice(-10) !== userKey) {
       return res.status(403).json({ message: "Invalid key" });
     }
 
@@ -194,8 +171,7 @@ exports.sendBeans = async (req, res, next) => {
     if (!recipient)
       return res.status(404).json({ message: "Recipient not found" });
 
-    // Add item to recipient's inventory
-    const item = {
+    const item: Partial<InventoryItem> = {
       name: "bean bag",
       meta: sender.name,
       specialPrice: amount,
@@ -203,8 +179,7 @@ exports.sendBeans = async (req, res, next) => {
     };
 
     sender.beans -= amount;
-    recipient.inventory = recipient.inventory || [];
-    recipient.inventory.push(item);
+    recipient.inventory.push(item as InventoryItem);
 
     recipient.notifications = recipient.notifications || [];
     recipient.notifications.push({
@@ -212,20 +187,24 @@ exports.sendBeans = async (req, res, next) => {
     });
 
     await Promise.all([sender.save(), recipient.save()]);
-
-    // **Fetch updated sender info**
     sender = await User.findById(userId).lean();
+
+    if (!sender) return res.status(404).json({ message: "User not found" });
 
     res.json({
       message: "Beans transferred successfully",
-      user: sanitizeUser(sender), // Ensure latest sender data is sent
+      user: sanitizeUser(sender),
     });
   } catch (error) {
     next(error);
   }
 };
 
-exports.sellItem = async (req, res, next) => {
+export const sellItem = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId, itemName, itemId } = req.body;
 
@@ -236,34 +215,29 @@ exports.sellItem = async (req, res, next) => {
       return res.status(400).json({ message: "User has no items to sell" });
     }
 
-    let itemValue = null;
-    let itemIndex = -1;
+    let itemValue: number = 0;
+    let itemIndex = user.inventory.findIndex(
+      (i: InventoryItem) => i._id == itemId
+    );
 
-    if (itemId) {
-      itemIndex = user.inventory.findIndex((i) => i._id == itemId);
-      if (itemIndex !== -1) {
-        itemValue = user.inventory[itemIndex].specialPrice;
-      }
+    if (itemIndex !== -1) {
+      itemValue = user.inventory[itemIndex].specialPrice || 0;
     }
 
     if (itemValue === null && itemName) {
       const item = ITEMS[itemName.toLowerCase()];
-      if (!item) {
-        return res.status(400).json({ message: "Invalid item name" });
-      }
+      if (!item) return res.status(400).json({ message: "Invalid item name" });
 
       itemIndex = user.inventory.findIndex(
-        (i) => i.name.toLowerCase() === itemName.toLowerCase()
+        (i: InventoryItem) => i.name.toLowerCase() === itemName.toLowerCase()
       );
-
       if (itemIndex !== -1) {
         itemValue = item.maintainsValue ? item.price : item.price / 2;
       }
     }
 
-    if (itemIndex === -1) {
+    if (itemIndex === -1)
       return res.status(400).json({ message: "Item not found in inventory" });
-    }
 
     user.inventory.splice(itemIndex, 1);
     user.beans += Math.floor(itemValue);

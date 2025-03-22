@@ -1,33 +1,36 @@
-const express = require("express");
+import express from "express";
+import * as productController from "../controllers/content.controller";
+import * as patreonController from "../controllers/patreon.controller";
+import dotenv from "dotenv";
+dotenv.config();
+
+const ROUTE_SECRET = process.env.ROUTE_SECRET;
+
 const router = express.Router();
-const ROUTE_SECRET = require("../routesecret.js");
 
-const product_controller = require("../controllers/content.controller");
-const patreon_controller = require("../controllers/patreon.controller");
+router.post(`/${ROUTE_SECRET}/create`, productController.product_create);
 
-router.post(`/${ROUTE_SECRET}/create`, product_controller.product_create);
-
-//update posts a new item under the update category
-router.post(`/${ROUTE_SECRET}/update`, product_controller.post_update);
+// Update posts a new item under the update category
+router.post(`/${ROUTE_SECRET}/update`, productController.post_update);
 
 router.put(
   `/${ROUTE_SECRET}/:id/seriesChange`,
-  product_controller.update_series
+  productController.update_series
 );
 
 router.put(
   `/${ROUTE_SECRET}/:id/iframeChange`,
-  product_controller.update_iframe
+  productController.update_iframe
 );
 
-router.delete(`/${ROUTE_SECRET}/:id/delete`, product_controller.product_delete);
+router.delete(`/${ROUTE_SECRET}/:id/delete`, productController.product_delete);
 
-router.get("/comic/:id", product_controller.comic_info);
+router.get("/comic/:id", productController.comic_info);
 
-router.get("/category/:cat", product_controller.category_list);
+router.get("/category/:cat", productController.category_list);
 
-router.get("/patrons/", patreon_controller.patreon);
+router.get("/patrons/", patreonController.get_patrons);
 
-router.get("/:num?", product_controller.whole_list);
+router.get("/:num?", productController.whole_list);
 
-module.exports = router;
+export default router;

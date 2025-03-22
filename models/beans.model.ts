@@ -50,11 +50,11 @@ export interface Bettor extends Document {
 // Notification Schema Interface
 interface Notification {
   text: string;
-  date: Date;
+  date?: Date;
 }
 
 // Inventory Item Schema Interface
-interface InventoryItem {
+export interface InventoryItem extends Document {
   name: string;
   meta: string;
   specialDescription?: string;

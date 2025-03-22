@@ -1,30 +1,51 @@
-const express = require("express");
-const router = express.Router();
-const pollController = require("../controllers/bean.controller");
-const userController = require("../controllers/beanUser.controller");
+import express, { Request, Response, NextFunction } from "express";
+import { Router } from "express";
+import * as adminController from "../controllers/beanAdmin.controller";
+import * as storeController from "../controllers/beanStore.controller";
+import * as wagerController from "../controllers/beanWager.controller";
+import * as userController from "../controllers/beanUser.controller";
+
+// Define the structure of the database and collection for type safety
+interface BeansDb {
+  collection: (collectionName: string) => any;
+}
 
 // Helper function to handle database operations
-const handleRequest = (req, res, next, collectionName, controllerMethod) => {
-  const beansDb = req.beansDb; // Access the correct database (test or beans)
+const handleRequest = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+  collectionName: string,
+  controllerMethod: Function
+): void => {
+  const beansDb: BeansDb | undefined = req.beansDb; // Access the correct database (test or beans)
+
+  if (!beansDb) {
+    res.status(500).json({ error: "Database connection is not available" });
+    return; // Return to stop further processing
+  }
+
   const beansCollection = beansDb.collection(collectionName);
   controllerMethod(req, res, next, beansCollection);
 };
 
+const router: Router = express.Router();
+
 // Poll Routes
 router.post("/polls/create", (req, res, next) =>
-  handleRequest(req, res, next, "polls", pollController.createPoll)
+  handleRequest(req, res, next, "polls", wagerController.createPoll)
 );
 router.post("/polls/set-winner", (req, res, next) =>
-  handleRequest(req, res, next, "polls", pollController.setPollWinner)
+  handleRequest(req, res, next, "polls", wagerController.setPollWinner)
 );
 router.post("/polls/bet", (req, res, next) =>
-  handleRequest(req, res, next, "polls", pollController.placeBet)
+  handleRequest(req, res, next, "polls", wagerController.placeBet)
 );
 router.get("/polls/:pollId", (req, res, next) =>
-  handleRequest(req, res, next, "polls", pollController.getPollById)
+  handleRequest(req, res, next, "polls", wagerController.getPollById)
 );
 router.get("/polls/", (req, res, next) =>
-  handleRequest(req, res, next, "polls", pollController.getAllPolls)
+  handleRequest(req, res, next, "polls", wagerController.getAllPolls)
 );
 
 // User Routes
@@ -47,38 +68,38 @@ router.put("/user/:id/update-notification", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.updateNotification)
 );
 
-//Admin Tools
+// Admin Tools
 router.post("/admin/mass-notification", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.sendMassNotification)
+  handleRequest(req, res, next, "users", adminController.sendMassNotification)
 );
 router.post("/admin/house-invites", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.createHouseInvite)
+  handleRequest(req, res, next, "users", adminController.createHouseInvite)
 );
 router.get("/admin/house-invites", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.getHouseInvites)
+  handleRequest(req, res, next, "users", adminController.getHouseInvites)
 );
 router.post("/admin/make-poll-illegal", (req, res, next) =>
-  handleRequest(req, res, next, "users", pollController.makeWagerIllegal)
+  handleRequest(req, res, next, "users", adminController.makeWagerIllegal)
 );
 router.post("/admin/refund-wager", (req, res, next) =>
-  handleRequest(req, res, next, "users", pollController.refundWager)
+  handleRequest(req, res, next, "users", adminController.refundWager)
 );
 
 // Store routes
 router.post("/store/buy-item", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.buyItem)
+  handleRequest(req, res, next, "users", storeController.buyItem)
 );
 router.post("/store/sell-item", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.sellItem)
-);
-router.post("/store/check-invite", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.checkInvite)
+  handleRequest(req, res, next, "users", storeController.sellItem)
 );
 router.post("/store/lottery", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.runLottery)
+  handleRequest(req, res, next, "users", storeController.runLottery)
 );
 router.get("/store/get-jackpot", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.getJackpot)
+  handleRequest(req, res, next, "users", storeController.getJackpot)
+);
+router.post("/store/send-beans", (req, res, next) =>
+  handleRequest(req, res, next, "users", storeController.sendBeans)
 );
 router.post("/store/debt", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.requestDebt)
@@ -86,8 +107,5 @@ router.post("/store/debt", (req, res, next) =>
 router.post("/store/pay-debt", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.payOffDebt)
 );
-router.post("/store/send-beans", (req, res, next) =>
-  handleRequest(req, res, next, "users", userController.sendBeans)
-);
 
-module.exports = router;
+export default router;

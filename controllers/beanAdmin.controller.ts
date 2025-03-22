@@ -1,21 +1,28 @@
-exports.refundWager = async (req, res, next) => {
+import { Request, Response, NextFunction } from "express";
+import { Bettor, InventoryItem, Poll, User } from "../models/beans.model";
+import { generateUniqueInviteCode } from "../utils/invite";
+
+const HOUSE_ID = "house_account_id"; // Replace with actual house account ID
+
+export const refundWager = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { pollId, userId, userKey } = req.body;
 
-    // Validate admin
-    const user = await User.findById(userId);
+    const user: Bettor | null = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
     if (user.role !== "admin")
       return res.status(403).json({ message: "User is not an admin" });
-    if (user.password.slice(-10) !== userKey)
+    if (user.password?.slice(-10) !== userKey)
       return res.status(403).json({ message: "Invalid key" });
 
-    // Find poll
-    const poll = await Poll.findById(pollId);
+    const poll: Poll | null = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    // Refund all bettors
-    const userRefunds = new Map();
+    const userRefunds = new Map<string, number>();
     poll.options.forEach((option) => {
       option.bettors.forEach((bettorId) => {
         userRefunds.set(
@@ -33,15 +40,14 @@ exports.refundWager = async (req, res, next) => {
             notifications: {
               text: `The wager "${
                 poll.title
-              }" has been refunded. The ${refundAmt.toLocaleString()} beans you bet have been returned to your bean bag.`,
+              }" has been refunded. The ${refundAmt.toLocaleString()} beans you bet have been returned.`,
             },
           },
         });
       })
     );
 
-    // Refund creator
-    const creator = await User.findById(poll.creatorId);
+    const creator: Bettor | null = await User.findById(poll.creatorId);
     if (creator) {
       creator.beans += poll.seed / 2;
       creator.notifications.push({
@@ -54,7 +60,6 @@ exports.refundWager = async (req, res, next) => {
       await creator.save();
     }
 
-    // Delete poll
     await Poll.findByIdAndDelete(pollId);
 
     res.json({ message: "All bets refunded, wager deleted" });
@@ -63,54 +68,44 @@ exports.refundWager = async (req, res, next) => {
   }
 };
 
-exports.makeWagerIllegal = async (req, res, next) => {
+export const makeWagerIllegal = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { pollId, userId, userKey, lawsBroken } = req.body;
 
-    // Fetch user and validate admin role
-    const user = await User.findById(userId);
+    const user: Bettor | null = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
     if (user.role !== "admin")
       return res.status(403).json({ message: "User is not an admin" });
-    if (user.password.slice(-10) !== userKey)
+    if (user.password?.slice(-10) !== userKey)
       return res.status(403).json({ message: "Invalid key" });
 
-    // Fetch poll and validate existence
-    const poll = await Poll.findById(pollId);
+    const poll: Poll | null = await Poll.findById(pollId);
     if (!poll) return res.status(404).json({ message: "Poll not found" });
 
-    // if poll is already illegal, return
     if (!poll.legalStatus.isLegal)
       return res.status(400).json({ message: "Wager already illegal" });
-
-    //if poll is already settled, return
     if (poll.winner)
       return res.status(400).json({ message: "Wager already settled" });
-
-    //if poll is already ended, return
-    if (poll.endDate < Date.now())
+    if (poll.endDate.getTime() < Date.now())
       return res.status(400).json({ message: "Wager already ended" });
 
-    //set End Date and settle date to now
-    poll.endDate = Date.now();
-    poll.settleDate = Date.now();
-
-    // Mark poll as illegal
+    poll.endDate = new Date();
+    poll.settleDate = new Date();
     poll.legalStatus = {
       isLegal: false,
-      lawsBroken: lawsBroken.split(",").map((law) => law.trim()),
-      dateBanned: new Date(),
+      lawsBroken: lawsBroken.split(",").map((law: string) => law.trim()),
     };
     await poll.save();
 
-    // Fetch creator
-    const creator = await User.findById(poll.creatorId);
+    const creator: Bettor | null = await User.findById(poll.creatorId);
     if (!creator) return res.status(404).json({ message: "Creator not found" });
 
-    // Notify bettors
     const notification = {
-      text: `ALERT: You are a victim! You bet in the wager "${poll.title}" which was found to be an illegal wager. 
-        The wager has been closed, but ${creator.name} successfully stole all the beans associated with it.`,
+      text: `ALERT: You are a victim! You bet in the wager "${poll.title}" which was found to be illegal.`,
     };
 
     await User.updateMany(
@@ -118,32 +113,20 @@ exports.makeWagerIllegal = async (req, res, next) => {
       { $push: { notifications: notification } }
     );
 
-    // Apply penalty and possible role change
     creator.penalties = (creator.penalties || 0) + 1;
-    if (creator.penalties >= 3) {
-      creator.role = "racketeer";
-    }
+    if (creator.penalties >= 3) creator.role = "racketeer";
 
-    // Remove bookie license if present
     creator.inventory = creator.inventory.filter(
       (item) => item.name !== "bookie license"
     );
 
-    // Notify creator
-    const creatorNotification = {
-      text:
-        `Your wager "${poll.title}" was found to be illegal due to breaking the following laws: ${lawsBroken}.` +
-        ` You did, however, successfully steal all ${poll.pot.toLocaleString()} beans associated with your illegal wager.` +
-        (creator.penalties >= 3
-          ? " You have been labeled a racketeer due to repeated offenses."
-          : ""),
-    };
-    creator.notifications.push(creatorNotification);
+    creator.notifications.push({
+      text: `Your wager "${
+        poll.title
+      }" was found to be illegal. Laws broken: ${lawsBroken}. You successfully stole ${poll.pot.toLocaleString()} beans.`,
+    });
 
-    // Reward creator with the pot
     creator.beans += poll.pot;
-
-    // Save creator changes
     await creator.save();
 
     res.json({ message: "Bet made illegal" });
@@ -152,32 +135,31 @@ exports.makeWagerIllegal = async (req, res, next) => {
   }
 };
 
-exports.sendMassNotification = async (req, res, next) => {
+export const sendMassNotification = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId, userKey, message } = req.body;
 
-    // Find the user by ID
-    const user = await User.findById(userId);
+    const user: Bettor | null = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
-
-    //check if user is an admin
     if (user.role !== "admin")
       return res.status(403).json({ message: "User is not an admin" });
-
-    // Check if the key matches the last 10 characters of the stored password
-    if (user.password.slice(-10) !== userKey)
+    if (user.password?.slice(-10) !== userKey)
       return res.status(403).json({ message: "Invalid key" });
 
-    // Find all users
-    const users = await User.find({ contentType: "user" });
-    if (!users) return res.status(404).json({ message: "No users found" });
+    const users: Bettor[] = await User.find({ contentType: "user" });
+    if (!users.length)
+      return res.status(404).json({ message: "No users found" });
 
-    // Send the message to all users
-    users.forEach(async (u) => {
-      if (!u.notifications) u.notifications = [];
-      u.notifications.push({ text: message });
-      await u.save();
-    });
+    await Promise.all(
+      users.map(async (u) => {
+        u.notifications.push({ text: message });
+        await u.save();
+      })
+    );
 
     res.json({ message: "Message sent to all users" });
   } catch (error) {
@@ -185,26 +167,27 @@ exports.sendMassNotification = async (req, res, next) => {
   }
 };
 
-exports.createHouseInvite = async (req, res, next) => {
+export const createHouseInvite = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId, userKey } = req.body;
 
-    const user = await User.findById(userId);
+    const user: Bettor | null = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
-
     if (user.role !== "admin")
       return res.status(403).json({ message: "User is not an admin" });
-
-    if (user.password.slice(-10) !== userKey)
+    if (user.password?.slice(-10) !== userKey)
       return res.status(403).json({ message: "Invalid key" });
 
-    const house = await User.findById(HOUSE_ID);
+    const house: Bettor | null = await User.findById(HOUSE_ID);
     if (!house)
       return res.status(404).json({ message: "House account not found" });
 
     const inviteCode = await generateUniqueInviteCode();
-
-    house.inventory.push({ name: "invite", meta: inviteCode });
+    house.inventory.push({ name: "invite", meta: inviteCode } as InventoryItem);
     await house.save();
 
     const invites = house.inventory.filter((item) => item.name === "invite");
@@ -215,24 +198,25 @@ exports.createHouseInvite = async (req, res, next) => {
   }
 };
 
-exports.getHouseInvites = async (req, res, next) => {
+export const getHouseInvites = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const { userId, userKey } = req.query;
+    const { userId, userKey } = req.query as {
+      userId: string;
+      userKey: string;
+    };
 
-    // Find the user by ID
-    const user = await User.findById(userId);
+    const user: Bettor | null = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
-
-    //check if user is an admin
     if (user.role !== "admin")
       return res.status(403).json({ message: "User is not an admin" });
-
-    // Check if the key matches the last 10 characters of the stored password
-    if (user.password.slice(-10) !== userKey)
+    if (user.password?.slice(-10) !== userKey)
       return res.status(403).json({ message: "Invalid key" });
 
-    // Find all users
-    const house = await User.findById(HOUSE_ID);
+    const house: Bettor | null = await User.findById(HOUSE_ID);
     if (!house)
       return res.status(404).json({ message: "House account not found" });
 

@@ -1,12 +1,15 @@
-import express, { Request, Response, NextFunction } from "express"; // Correct imports
+import express, { Request, Response, NextFunction } from "express";
 import fileUpload from "express-fileupload";
 import bodyParser from "body-parser";
-import mongoose from "mongoose"; // Simplified import
+import mongoose from "mongoose";
 import dotenv from "dotenv";
+import product from "./routes/content.route";
+import beanRoutes from "./routes/bean.route";
+import startTaxSchedule from "./routines/taxCollector";
+
 dotenv.config();
 
 const MONDO_SECRET = process.env.MONDO_SECRET;
-const startTaxSchedule = require("./taxCollector");
 
 const mongoDB = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
 mongoose.connect(mongoDB, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -66,9 +69,6 @@ app.use((req: Request, res: Response, next: NextFunction): void => {
 app.use(fileUpload());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-
-const product = require("./routes/content.route");
-const beanRoutes = require("./routes/bean.route");
 
 app.use("/api", product);
 app.use("/api/beans", beanRoutes);

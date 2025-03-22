@@ -1,26 +1,33 @@
-const { User } = require("../models/beans.model.js");
-const crypto = require("crypto");
-const mongoose = require("mongoose");
-const sanitizeUser = require("../utils/sanitizeUser");
-const { HOUSE_ID, DUPE_ID } = require("../beansecret.js");
+import { Request, Response, NextFunction } from "express";
+import crypto from "crypto";
+import mongoose from "mongoose";
+import { User } from "../models/beans.model";
+import sanitizeUser from "../utils/sanitizeUser";
+import dotenv from "dotenv";
+dotenv.config();
 
-const getKey = (string) => string.slice(-10);
+const HOUSE_ID = process.env.HOUSE_ID;
+const DUPE_ID = process.env.DUPE_ID;
 
-exports.registerUser = async (req, res, next) => {
+const getKey = (str: string): string => str.slice(-10);
+
+export const registerUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { name, password, inviteCode } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ name });
     if (existingUser) {
       return res.status(400).json({ message: "Username already taken" });
     }
 
-    let referrer = null;
     if (!inviteCode) {
       return res.status(400).json({ message: "Invite code required" });
     }
-    // Find user with the invite
+
     const inviter = await User.findOne({
       "inventory.name": "invite",
       "inventory.meta": inviteCode,
@@ -30,7 +37,6 @@ exports.registerUser = async (req, res, next) => {
       return res.status(404).json({ message: "Invalid invite code" });
     }
 
-    // Remove invite from inviter's inventory
     inviter.inventory = inviter.inventory.filter(
       (item) => !(item.name === "invite" && item.meta === inviteCode)
     );
@@ -41,25 +47,23 @@ exports.registerUser = async (req, res, next) => {
     });
 
     await inviter.save();
-    referrer = inviter._id;
+    const referrer = inviter._id;
 
-    // Hash the password using crypto
     const hashedPassword = crypto
       .createHash("sha256")
       .update(password)
       .digest("hex");
 
-    // Create a new user
     const user = new User({
       name,
       password: hashedPassword,
       wins: [],
       referrer,
-    });
-
-    user.notifications = [];
-    user.notifications.push({
-      text: "Welcome to the game! You have been gifted 10,000,000 beans to start betting.",
+      notifications: [
+        {
+          text: "Welcome to the game! You have been gifted 10,000,000 beans to start betting.",
+        },
+      ],
     });
 
     await user.save();
@@ -73,8 +77,11 @@ exports.registerUser = async (req, res, next) => {
   }
 };
 
-// Login a user
-exports.loginUser = async (req, res, next) => {
+export const loginUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { name, password } = req.body;
 
@@ -87,7 +94,6 @@ exports.loginUser = async (req, res, next) => {
       .createHash("sha256")
       .update(password)
       .digest("hex");
-
     if (hashedInputPassword !== user.password) {
       return res.status(400).json({ message: "Invalid username or password" });
     }
@@ -102,8 +108,11 @@ exports.loginUser = async (req, res, next) => {
   }
 };
 
-// Get user details
-exports.getUser = async (req, res, next) => {
+export const getUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id, key } = req.params;
 
@@ -113,9 +122,9 @@ exports.getUser = async (req, res, next) => {
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Check if the key matches the last 10 characters of the stored password
-    if (user.password.slice(-10) !== key)
+    if (user.password?.slice(-10) !== key) {
       return res.status(403).json({ message: "Invalid key" });
+    }
 
     res.status(200).json(sanitizeUser(user));
   } catch (error) {
@@ -123,7 +132,11 @@ exports.getUser = async (req, res, next) => {
   }
 };
 
-exports.getWinners = async (req, res, next) => {
+export const getWinners = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const excludedUsers = [
       new mongoose.Types.ObjectId(HOUSE_ID),
@@ -132,10 +145,9 @@ exports.getWinners = async (req, res, next) => {
 
     const winners = await User.find({
       contentType: "user",
-      _id: { $nin: excludedUsers }, // Exclude specific users
+      _id: { $nin: excludedUsers },
     }).select("name beans debt wins -_id");
 
-    // Sort by beans - debt in descending order
     winners.sort((a, b) => b.beans - b.debt - (a.beans - a.debt));
 
     res.json(winners);
@@ -144,22 +156,26 @@ exports.getWinners = async (req, res, next) => {
   }
 };
 
-// Update user information
-//this controller should not exist, really
-exports.updateUser = async (req, res, next) => {
+export const updateUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
 
-    delete updateData.password;
-    delete updateData.contentType;
-    delete updateData._id;
-    delete updateData.role;
-    delete updateData.beans;
-    delete updateData.wins;
-    delete updateData.inventory;
-    delete updateData.name;
-    delete updateData.penalties;
+    [
+      "password",
+      "contentType",
+      "_id",
+      "role",
+      "beans",
+      "wins",
+      "inventory",
+      "name",
+      "penalties",
+    ].forEach((field) => delete updateData[field]);
 
     const user = await User.findByIdAndUpdate(id, updateData, {
       new: true,
@@ -177,7 +193,11 @@ exports.updateUser = async (req, res, next) => {
   }
 };
 
-exports.updateNotification = async (req, res, next) => {
+export const updateNotification = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
     const user = await User.findById(id);
@@ -196,17 +216,18 @@ exports.updateNotification = async (req, res, next) => {
   }
 };
 
-// Debt Request Controller
-exports.requestDebt = async (req, res, next) => {
+export const requestDebt = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId, amount } = req.body;
 
-    // Find the user by ID
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Ensure the user has less than 1,000,000 beans and no items in their inventory
-    if (user.beans >= 2000000) {
+    if (user.beans >= 2_000_000) {
       return res
         .status(400)
         .json({ message: "User has enough beans to not be eligible for debt" });
@@ -223,20 +244,17 @@ exports.requestDebt = async (req, res, next) => {
       });
     }
 
-    if (amount < 2000000 || amount > 50000000) {
+    if (amount < 2_000_000 || amount > 50_000_000) {
       return res.status(400).json({
         message: "Requested amount must be between 2,000,000 and 50,000,000",
       });
     }
 
-    // Calculate the debt with the 20% fee
-    const debtWithFee = Math.floor(amount * 1.2); // Adding 20% fee
+    const debtWithFee = Math.floor(amount * 1.2);
 
-    // Add the debt and the requested beans to the user's account
     user.debt += debtWithFee;
     user.beans += amount;
 
-    // Save the updated user data
     await user.save();
 
     res.json({
@@ -248,35 +266,32 @@ exports.requestDebt = async (req, res, next) => {
   }
 };
 
-// Debt Payment Controller
-exports.payOffDebt = async (req, res, next) => {
+export const payOffDebt = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { userId, amount } = req.body;
 
-    // Find the user by ID
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Check if the user has any debt
     if (user.debt <= 0) {
       return res.status(400).json({ message: "User has no debt to pay off" });
     }
 
-    // Ensure the user has enough beans to pay off the debt
     if (user.beans < amount) {
       return res
         .status(400)
         .json({ message: "Not enough beans to pay off the debt" });
     }
 
-    // Calculate the amount to pay off, ensuring it doesn't exceed the user's debt
     const payAmount = Math.min(amount, user.debt);
 
-    // Deduct the payment from the user's beans
     user.beans -= payAmount;
     user.debt -= payAmount;
 
-    // Save the updated user data
     await user.save();
 
     res.json({

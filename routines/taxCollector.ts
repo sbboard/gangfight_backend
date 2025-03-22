@@ -1,6 +1,9 @@
-const cron = require("node-cron");
-const { User, Poll } = require("./models/beans.model.js");
-const { HOUSE_ID } = require("./beansecret.js");
+import cron from "node-cron";
+import { User, Poll } from "../models/beans.model";
+import dotenv from "dotenv";
+dotenv.config();
+
+const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 
 const taxBrackets = [
   { threshold: 1_000_000_000, rate: 0.4 }, // 1B+ -> 40%
@@ -9,7 +12,7 @@ const taxBrackets = [
   { threshold: 100_000_000, rate: 0.1 }, // 100M+ -> 10%
 ];
 
-async function collectBeanTaxes() {
+async function collectBeanTaxes(): Promise<void> {
   try {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -19,7 +22,7 @@ async function collectBeanTaxes() {
       _id: { $ne: HOUSE_ID },
     });
 
-    const updates = users.map(async (user) => {
+    const updates = users.map(async (user: any) => {
       const recentPolls = await Poll.find({
         creatorId: user._id,
         creationDate: { $gte: oneWeekAgo },
@@ -27,10 +30,10 @@ async function collectBeanTaxes() {
 
       if (recentPolls.length > 0) return null;
 
-      const { rate } = taxBrackets.find(
-        (bracket) => user.beans >= bracket.threshold
-      ) || { rate: 0 };
-      const tax = Math.floor(user.beans * rate);
+      const bracket = taxBrackets.find((b) => user.beans >= b.threshold) || {
+        rate: 0,
+      };
+      const tax = Math.floor(user.beans * bracket.rate);
       user.beans -= tax;
 
       return User.updateOne(
@@ -40,7 +43,7 @@ async function collectBeanTaxes() {
           $push: {
             notifications: {
               text: `You were taxed ${tax.toLocaleString()} beans (${
-                rate * 100
+                bracket.rate * 100
               }%). Thank you for your contribution to the community!`,
             },
           },
@@ -49,16 +52,15 @@ async function collectBeanTaxes() {
     });
 
     const validUpdates = updates.filter((update) => update !== null);
-
     await Promise.all(validUpdates);
   } catch (error) {
     console.error("❌ Error collecting bean taxes:", error);
   }
 }
 
-module.exports = function startTaxSchedule() {
+export default function startTaxSchedule(): void {
   console.log("🕒 Bean tax scheduler initialized.");
   cron.schedule("0 20 * * 0", collectBeanTaxes, {
     timezone: "America/New_York",
   });
-};
+}

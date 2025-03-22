@@ -1,17 +1,22 @@
-const Product = require("../models/content.model");
-var fs = require("fs");
-const path = require("path");
+import { Request, Response, NextFunction } from "express";
+import fs from "fs";
+import path from "path";
+import Product from "../models/content.model";
+import { UploadedFile } from "express-fileupload";
 
-const searchIdPromise = (id) => Product.find({ _id: id }).exec();
-const generateUniqueName = (basePath, fileName) => {
+const searchIdPromise = (id: string) => Product.find({ _id: id }).exec();
+
+const generateUniqueName = (basePath: string, fileName: string): string => {
   const ext = path.extname(fileName);
   const baseName = path.basename(fileName, ext);
   let uniqueName = fileName;
   let counter = 1;
+
   while (fs.existsSync(basePath + uniqueName)) {
     uniqueName = `${baseName}_${counter}${ext}`;
     counter++;
   }
+
   return uniqueName;
 };
 
@@ -21,42 +26,61 @@ const posted = `Posted!<br/>${CTA}`;
 const deleted = `Deleted!<br/>${CTA}`;
 const updated = `Updated!<br/>${CTA}`;
 
-exports.product_create = (req, res, next) => {
-  //handle thumbnail image
-  let name = generateUniqueName(thumbDir, req.files.img.name);
-  req.files.img.mv(path.join(thumbDir, name), (err) => {
+export const product_create = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.files || !req.files.img) {
+    res.status(400).send("No image uploaded.");
+    return;
+  }
+
+  const imgFile = req.files.img as UploadedFile;
+  const name = generateUniqueName(thumbDir, imgFile.name);
+
+  imgFile.mv(path.join(thumbDir, name), (err) => {
     if (err) return res.status(500).send("Thumbnail upload failed.");
   });
 
-  //handle comicsArray or URL
-  const detArray = [];
-  const { title: t, subtitle: s } = req.body;
+  const detArray: string[] = [];
+  const {
+    title: t,
+    subtitle: s,
+    comicSource,
+    url,
+    category,
+    series,
+  } = req.body;
   const projName = t.replace(/[^\w]/gi, "") + s.replace(/[^\w]/gi, "");
-  const isUpload = req.body.comicSource == "Upload";
+  const isUpload = comicSource === "Upload";
+
   if (isUpload) {
     const dir = `/var/www/html/assets/comics/${projName}`;
     if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+
     if (Array.isArray(req.files.pages)) {
-      for (let i = 0; i < req.files.pages.length; i++) {
-        req.files.pages[i].mv(dir + "/" + req.files.pages[i].name);
-        detArray.push(req.files.pages[i].name);
-      }
+      req.files.pages.forEach((file: UploadedFile) => {
+        file.mv(`${dir}/${file.name}`);
+        detArray.push(file.name);
+      });
     } else {
-      req.files.pages.mv(dir + "/" + req.files.pages.name);
-      detArray.push(req.files.pages.name);
+      const file = req.files.pages as UploadedFile;
+      file.mv(`${dir}/${file.name}`);
+      detArray.push(file.name);
     }
   }
-  const url = isUpload ? projName : req.body.url;
-  let product = new Product({
+
+  const product = new Product({
     title: t,
     subtitle: s,
     img: name,
-    url,
-    category: req.body.category,
-    date: Date(),
-    series: req.body.series,
+    url: isUpload ? projName : url,
+    category,
+    date: new Date(),
+    series,
     comicsArray: detArray,
-    updatedDate: Date(),
+    updatedDate: new Date(),
   });
 
   product.save((err) => {
@@ -65,112 +89,132 @@ exports.product_create = (req, res, next) => {
   });
 };
 
-exports.post_update = (req, res, next) => {
-  let name = "";
-  //get info from old post
-  let promise = searchIdPromise(req.body.contentUpdating);
-  promise
-    .then((oldContent) => {
-      //handle thumbnail
-      if (req.hasOwnProperty("files")) {
-        name = generateUniqueName(thumbDir, req.files.img.name);
-        req.files.img.mv(thumbDir + name);
-      } else {
-        name = oldContent.img;
-      }
-      //add new update for homepage
-      let product = new Product({
-        title: oldContent[0].title,
-        subtitle: req.body.subtitle,
-        img: name,
-        url: oldContent[0].url,
-        category: "update",
-        date: Date(),
-        series: oldContent[0].series,
-        comicsArray: oldContent[0].comicsArray,
-        updatedDate: Date(),
-      });
-      return {
-        product: product,
-        name: name,
-        updating: req.body.contentUpdating,
-      };
-    })
-    .then((deliverable) => {
-      //update old project
-      Product.findByIdAndUpdate(deliverable.updating, {
-        $set: {
-          updatedDate: Date(),
-          img: deliverable.name,
-        },
-      }).exec();
-      return deliverable.product;
-    })
-    .then((product) =>
-      product.save((err) => {
-        if (err) {
-          return next(err);
-        }
-        res.send(posted);
-      })
+export const post_update = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    let name = "";
+    const oldContent = await searchIdPromise(req.body.contentUpdating);
+
+    if (req.files && req.files.img) {
+      const imgFile = req.files.img as UploadedFile;
+      name = generateUniqueName(thumbDir, imgFile.name);
+      imgFile.mv(thumbDir + name);
+    } else {
+      name = oldContent[0]?.img;
+    }
+
+    const product = new Product({
+      title: oldContent[0]?.title,
+      subtitle: req.body.subtitle,
+      img: name,
+      url: oldContent[0]?.url,
+      category: "update",
+      date: new Date(),
+      series: oldContent[0]?.series,
+      comicsArray: oldContent[0]?.comicsArray,
+      updatedDate: new Date(),
+    });
+
+    await Product.findByIdAndUpdate(req.body.contentUpdating, {
+      $set: { updatedDate: new Date(), img: name },
+    }).exec();
+
+    await product.save();
+    res.send(posted);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const whole_list = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const personList = await Product.find({}).sort("-date").exec();
+    res.send(
+      isNaN(Number(req.params.num))
+        ? personList
+        : personList.slice(0, Number(req.params.num))
     );
+  } catch (err) {
+    next(err);
+  }
 };
 
-exports.whole_list = (req, res, next) => {
-  Product.find({})
-    .sort("-date")
-    .exec((err, personList) => {
-      if (err) return next(err);
-      if (isNaN(req.params.num)) {
-        res.send(personList);
-      } else {
-        res.send(personList.slice(0, req.params.num));
-      }
-    });
-};
-
-exports.category_list = (req, res, next) => {
-  Product.find({ category: req.params.cat })
-    .sort("-updatedDate")
-    .exec((err, personList) => {
-      if (err) return next(err);
-      res.send(personList);
-    });
-};
-
-exports.comic_info = (req, res, next) => {
-  Product.find({ _id: req.params.id }).exec((err, personList) => {
-    if (err) return next(err);
+export const category_list = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const personList = await Product.find({ category: req.params.cat })
+      .sort("-updatedDate")
+      .exec();
     res.send(personList);
-  });
+  } catch (err) {
+    next(err);
+  }
 };
 
-exports.update_iframe = (req, res, next) => {
-  Product.findByIdAndUpdate(
-    req.params.id,
-    { iframe: req.body.iframe },
-    { new: true },
-    (err, updatedProduct) => {
-      if (err) return next(err);
-      res.send(updatedProduct);
-    }
-  );
+export const comic_info = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const personList = await Product.find({ _id: req.params.id }).exec();
+    res.send(personList);
+  } catch (err) {
+    next(err);
+  }
 };
 
-exports.update_series = (req, res, next) => {
-  Product.findByIdAndUpdate(
-    req.params.id,
-    { series: req.body.series },
-    (err, product) => {
-      if (err) return next(err);
-      res.send(updated);
-    }
-  );
+export const update_iframe = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const updatedProduct = await Product.findByIdAndUpdate(
+      req.params.id,
+      { iframe: req.body.iframe },
+      { new: true }
+    ).exec();
+    res.send(updatedProduct);
+  } catch (err) {
+    next(err);
+  }
 };
 
-exports.product_delete = (req, res, next) => {
-  Product.findByIdAndRemove(req.params.id, (err) => {
-    if (err) return next(err);
+export const update_series = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    await Product.findByIdAndUpdate(req.params.id, {
+      series: req.body.series,
+    }).exec();
+    res.send(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const product_delete = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    await Product.findByIdAndRemove(req.params.id).exec();
     res.send(deleted);
-  });
+  } catch (err) {
+    next(err);
+  }
 };
