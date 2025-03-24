@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { Bettor, InventoryItem, Poll, User } from "../models/beans.model.js";
 import { generateUniqueInviteCode } from "../utils/invite.js";
+import dotenv from "dotenv";
+dotenv.config();
 
-const HOUSE_ID = "house_account_id"; // Replace with actual house account ID
+const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 
 export const refundWager = async (
   req: Request,
