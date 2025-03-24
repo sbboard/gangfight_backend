@@ -57,6 +57,9 @@ router.post("/user/login", (req, res, next) =>
 router.get("/user/winners", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.getWinners)
 );
+router.get("/user/winners-chart", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.getTopTenLog)
+);
 router.get("/user/:id/:key", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.getUser)
 );

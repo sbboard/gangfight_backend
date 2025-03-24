@@ -8,6 +8,8 @@ import startTaxSchedule from "./routines/taxCollector.js";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import dotenv from "dotenv";
+import startWinCleaner from "./routines/winCheck.js";
+import startLogTopTen from "./routines/logTopTen.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: `${__dirname}/.env` });
 
@@ -80,8 +82,10 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-// Start tax schedule
-startTaxSchedule();
+// Start routines
+startWinCleaner(); //DAILY @7PM
+startTaxSchedule(); //SUNDAY @8PM
+startLogTopTen(); //DAILY @8:30PM
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack);
