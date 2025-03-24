@@ -22,9 +22,9 @@ const sanitizePoll = async (
   const uncachedUserIds = uniqueUserIds.filter((userId) => !userCache[userId]);
 
   if (uncachedUserIds.length > 0) {
-    const users: Bettor[] = await User.find({ _id: { $in: uncachedUserIds } })
+    const users = await User.find({ _id: { $in: uncachedUserIds } })
       .select("name")
-      .lean();
+      .lean<Bettor[]>(); // ✅ Explicitly type the query result
 
     // Populate the cache with the fetched user names
     users.forEach((user) => (userCache[user._id.toString()] = user.name));
@@ -47,4 +47,4 @@ const sanitizePoll = async (
   return sanitizedPoll;
 };
 
-export default sanitizePoll; // Use export default in TypeScript
+export default sanitizePoll;

@@ -187,13 +187,12 @@ export const sendBeans = async (
     });
 
     await Promise.all([sender.save(), recipient.save()]);
-    sender = await User.findById(userId).lean();
-
-    if (!sender) return res.status(404).json({ message: "User not found" });
+    const senderData = await User.findById(userId).lean();
+    if (!senderData) return res.status(404).json({ message: "User not found" });
 
     res.json({
       message: "Beans transferred successfully",
-      user: sanitizeUser(sender),
+      user: sanitizeUser(senderData),
     });
   } catch (error) {
     next(error);

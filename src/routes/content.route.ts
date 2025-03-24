@@ -1,6 +1,6 @@
 import express from "express";
 import * as productController from "../controllers/content.controller.js";
-import * as patreonController from "../controllers/patreon.controller.js";
+//import * as patreonController from "../controllers/patreon.controller.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -29,7 +29,7 @@ router.get("/comic/:id", productController.comic_info);
 
 router.get("/category/:cat", productController.category_list);
 
-router.get("/patrons/", patreonController.get_patrons);
+//router.get("/patrons/", patreonController.get_patrons);
 
 router.get("/:num?", productController.whole_list);
 

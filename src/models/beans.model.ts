@@ -4,12 +4,14 @@ const { Schema } = mongoose; // Destructure Schema from the default import
 
 // Poll Option Schema Interface
 export interface PollOption extends mongoose.Document {
+  _id: string;
   text: string;
   bettors: string[];
 }
 
 // Poll Schema Interface
 interface Poll extends mongoose.Document {
+  _id: string;
   creatorId?: string;
   creatorName?: string;
   title: string;
@@ -33,6 +35,7 @@ interface Poll extends mongoose.Document {
 
 // User Schema Interface
 export interface Bettor extends mongoose.Document {
+  _id: string;
   name: string;
   lastIP?: string;
   debt: number;

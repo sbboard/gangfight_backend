@@ -26,11 +26,11 @@ const posted = `Posted!<br/>${CTA}`;
 const deleted = `Deleted!<br/>${CTA}`;
 const updated = `Updated!<br/>${CTA}`;
 
-export const product_create = (
+export const product_create = async (
   req: Request,
   res: Response,
   next: NextFunction
-): void => {
+) => {
   if (!req.files || !req.files.img) {
     res.status(400).send("No image uploaded.");
     return;
@@ -83,10 +83,8 @@ export const product_create = (
     updatedDate: new Date(),
   });
 
-  product.save((err) => {
-    if (err) return next(err);
-    res.send(posted);
-  });
+  await product.save();
+  res.send("Product created successfully");
 };
 
 export const post_update = async (
@@ -212,7 +210,7 @@ export const product_delete = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    await Product.findByIdAndRemove(req.params.id).exec();
+    await Product.findByIdAndDelete(req.params.id).exec();
     res.send(deleted);
   } catch (err) {
     next(err);
