@@ -57,8 +57,8 @@ export const createPoll = async (
         .json({ message: "At least 2 options are required" });
     }
 
-    if (options.length > 15) {
-      return res.status(400).json({ message: "Maximum of 15 options allowed" });
+    if (options.length > 20) {
+      return res.status(400).json({ message: "Maximum of 20 options allowed" });
     }
 
     const user = await User.findById(creatorId);
