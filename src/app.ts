@@ -2,15 +2,16 @@ import express, { Request, Response, NextFunction } from "express";
 import fileUpload from "express-fileupload";
 import bodyParser from "body-parser";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import product from "./routes/content.route.js";
 import beanRoutes from "./routes/bean.route.js";
 import startTaxSchedule from "./routines/taxCollector.js";
-
-dotenv.config();
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import dotenv from "dotenv";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: `${__dirname}/.env` });
 
 const MONDO_SECRET = process.env.MONDO_SECRET;
-
 const mongoDB = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
 mongoose.connect(mongoDB);
 const db = mongoose.connection;

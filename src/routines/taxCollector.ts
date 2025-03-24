@@ -1,7 +1,10 @@
 import cron from "node-cron";
 import { User, Poll } from "../models/beans.model.js";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import dotenv from "dotenv";
-dotenv.config();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, "..", ".env") });
 
 const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 

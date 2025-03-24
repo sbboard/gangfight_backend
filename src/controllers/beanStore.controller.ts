@@ -3,8 +3,11 @@ import { User, Bettor, InventoryItem } from "../models/beans.model.js";
 import { generateUniqueInviteCode } from "../utils/invite.js";
 import { sanitizeUser } from "../utils/sanitizeUser.js";
 import { ITEMS } from "../constants/items.js";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import dotenv from "dotenv";
-dotenv.config();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, "..", ".env") });
 
 const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 

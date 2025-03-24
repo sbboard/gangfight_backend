@@ -1,6 +1,9 @@
 import patreon from "patreon";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import dotenv from "dotenv";
-dotenv.config();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: join(__dirname, "..", ".env") });
 
 const accessToken = process.env.PATREON_ACCESS_TOKEN as string;
 

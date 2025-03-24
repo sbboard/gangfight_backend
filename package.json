@@ -14,7 +14,7 @@
     "typescript": "^5.8.2"
   },
   "scripts": {
-    "buildandstart": "npm run clean && npm run gcp-build && npm run start",
+    "buildandstart": "npm run clean && npm run gcp-build && cp src/.env package.json dist/ && npm run start",
     "clean": "rm -rf ./dist",
     "gcp-build": "tsc -p .",
     "start": "node dist/app.js"
