@@ -6,7 +6,7 @@ import { ITEMS } from "../constants/items.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-const HOUSE_ID = process.env.HOUSE_ID;
+const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 
 const LOTTO_PRICE = 10_000;
 

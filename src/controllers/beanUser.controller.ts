@@ -6,8 +6,8 @@ import sanitizeUser from "../utils/sanitizeUser.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-const HOUSE_ID = process.env.HOUSE_ID;
-const DUPE_ID = process.env.DUPE_ID;
+const HOUSE_ID = process.env.BEAN_HOUSE_ID;
+const DUPE_ID = process.env.BEAN_DUPE_ID;
 
 const getKey = (str: string): string => str.slice(-10);
 
