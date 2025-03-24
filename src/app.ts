@@ -13,9 +13,9 @@ const MONDO_SECRET = process.env.MONDO_SECRET;
 
 const mongoDB = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
 mongoose.connect(mongoDB);
-mongoose.Promise = global.Promise;
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
+db.once("open", () => console.log("Connected to MongoDB successfully"));
 
 const app = express();
 
@@ -75,9 +75,14 @@ app.use("/api", product);
 app.use("/api/beans", beanRoutes);
 
 const port = process.env.PORT || 8128;
-
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-startTaxSchedule(); // Start the tax collector
+// Start tax schedule
+startTaxSchedule();
+
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).send({ error: "Something went wrong!" });
+});
