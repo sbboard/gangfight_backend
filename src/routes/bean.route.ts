@@ -69,6 +69,9 @@ router.put("/user/:id", (req, res, next) =>
 router.put("/user/:id/update-notification", (req, res, next) =>
   handleRequest(req, res, next, "users", userController.updateNotification)
 );
+router.put("/user/:id/clear-notifications", (req, res, next) =>
+  handleRequest(req, res, next, "users", userController.clearNotifications)
+);
 
 // Admin Tools
 router.post("/admin/mass-notification", (req, res, next) =>
