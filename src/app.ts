@@ -10,6 +10,7 @@ import { dirname } from "path";
 import dotenv from "dotenv";
 import startWinCleaner from "./routines/winCheck.js";
 import startLogTopTen from "./routines/logTopTen.js";
+import startRepopulation from "./routines/repopulateWins.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: `${__dirname}/.env` });
 
@@ -83,6 +84,7 @@ app.listen(port, () => {
 });
 
 // Start routines
+// startRepopulation(); only run when necessary
 startWinCleaner(); //DAILY @7PM
 startTaxSchedule(); //SUNDAY @8PM
 startLogTopTen(); //DAILY @8:30PM
