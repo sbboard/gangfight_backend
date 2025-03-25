@@ -24,20 +24,10 @@ async function logTopTen(): Promise<void> {
       .sort((a: Bettor, b: Bettor) => b.wins.length - a.wins.length)
       .slice(0, 10);
 
-    const beans = topTen.map((user: Bettor) => ({
-      name: user.name,
-      beans: user.beans,
-    }));
-
-    const wins = topTenWins.map((user: Bettor) => ({
-      name: user.name,
-      wins: user.wins.length,
-    }));
-
     const newEntry = {
       date: new Date(),
-      beans,
-      wins,
+      beans: topTen.map((user: Bettor) => user.name),
+      wins: topTenWins.map((user: Bettor) => user.name),
     };
 
     // File path
