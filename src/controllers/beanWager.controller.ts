@@ -284,6 +284,8 @@ export const setPollWinner = async (
         .json({ message: poll ? "Winner already set" : "Poll not found" });
     }
 
+    poll.settleDate = new Date();
+
     let winningOption: PollOption | undefined;
     if (optionId) {
       // Find the winning option
@@ -402,6 +404,9 @@ export const setPollWinner = async (
     // Process user payouts in batch
     await Promise.all(
       Array.from(userPayouts.entries()).map(async ([userId, totalPayout]) => {
+        if (userId === poll.creatorId) {
+          totalPayout += Math.floor(jackpot * 0.05);
+        }
         await User.findByIdAndUpdate(userId, {
           $inc: { beans: totalPayout },
           $push: {
