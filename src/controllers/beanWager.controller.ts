@@ -297,27 +297,27 @@ export const setPollWinner = async (
         return res.status(400).json({ message: "Invalid option ID" });
       }
 
-      winningOptionIds.push(optionId);
+      winningOptionIds = [optionId];
       poll.winner = optionId;
-      await poll.save();
     } else if (optionsArray) {
       const realOptions = poll.options.filter((opt) =>
         optionsArray.includes(opt._id.toString())
       );
-      if (realOptions.length !== winningOptionIds.length) {
+      if (realOptions.length !== optionsArray.length) {
         return res.status(400).json({ message: "Invalid option IDs" });
       }
 
       winningOptionIds = optionsArray;
       poll.winners = optionsArray;
-      await poll.save();
     } else {
       return res.status(400).json({ message: "No winner provided" });
     }
-    ///////////////////////////////////////////////////////
-    //payout the winners
 
-    // Payout 5% of the jackpot to the creator
+    await poll.save(); // Save before payouts
+
+    ///////////////////////////////////////////////////////
+    // Payout logic
+
     let jackpot = poll.pot;
     const creator = await User.findById(poll.creatorId);
     if (creator) {
@@ -327,7 +327,7 @@ export const setPollWinner = async (
       jackpot -= creatorPayout;
     }
 
-    const winningOptions: PollOption[] = poll.options.filter((opt) =>
+    const winningOptions = poll.options.filter((opt) =>
       winningOptionIds.includes(opt._id.toString())
     );
     const totalVoters = poll.options.flatMap((opt) => opt.bettors);
@@ -341,7 +341,6 @@ export const setPollWinner = async (
       return res.json({ message: "All bettors refunded, no winner recorded" });
     }
 
-    // If no one won, give the remaining jackpot to fallback user
     if (!totalWinners.length) {
       await User.findByIdAndUpdate(HOUSE_ID, { $inc: { beans: jackpot } });
       return res.json({
@@ -352,36 +351,35 @@ export const setPollWinner = async (
 
     const uniqueVoters = new Set(totalVoters);
 
-    uniqueVoters.forEach(async (voter) => {
-      const bookieTax = poll.pot * 0.05;
-      let payout = poll.creatorId === voter ? bookieTax : 0;
+    await Promise.all(
+      [...uniqueVoters].map(async (voter) => {
+        const bookieTax = poll.pot * 0.05;
+        let payout = poll.creatorId === voter ? bookieTax : 0;
 
-      const optWithBets = winningOptions.filter((o) => o.bettors.length > 0);
-      const beansPerBet = jackpot / optWithBets.length;
+        const optWithBets = winningOptions.filter((o) => o.bettors.length > 0);
+        const beansPerBet = jackpot / optWithBets.length;
 
-      optWithBets.forEach((o) => {
-        const ts = o.bettors.length;
-        const yourShares = o.bettors.filter((i) => i === voter).length / ts;
-        payout += beansPerBet * yourShares;
-      });
+        optWithBets.forEach((o) => {
+          const ts = o.bettors.length;
+          const yourPercent = o.bettors.filter((i) => i === voter).length / ts;
+          payout += beansPerBet * yourPercent;
+        });
 
-      const user = await User.findById(voter);
-      if (user) {
-        user.beans += Math.floor(payout);
-        if (payout <= 0) {
+        const user = await User.findById(voter);
+        if (user) {
+          user.beans += Math.floor(payout);
           user.notifications.push({
-            text: `Sorry! You lost the wager "${poll.title}". We're sorry this happened to you but please remember - never stop betting! The only way to truly lose is to quit before your big win.`,
+            text:
+              payout > 0
+                ? `Congratulations! You won ${payout.toLocaleString()} from the wager "${
+                    poll.title
+                  }".`
+                : `Sorry! You lost the wager "${poll.title}". Never stop betting — your big win is coming!`,
           });
-        } else {
-          user.notifications.push({
-            text: `Congratulations! You won ${payout.toLocaleString()} from the wager "${
-              poll.title
-            }".`,
-          });
+          await user.save();
         }
-        user.save();
-      }
-    });
+      })
+    );
 
     const updatedCreator = await User.findById(creator?._id);
 
