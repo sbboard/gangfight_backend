@@ -355,6 +355,7 @@ export const setPollWinner = async (
       [...uniqueVoters].map(async (voter) => {
         const bookieTax = poll.pot * 0.05;
         let payout = poll.creatorId === voter ? bookieTax : 0;
+        let isWinner = false;
 
         const optWithBets = winningOptions.filter((o) => o.bettors.length > 0);
         const beansPerBet = jackpot / optWithBets.length;
@@ -362,19 +363,20 @@ export const setPollWinner = async (
         optWithBets.forEach((o) => {
           const ts = o.bettors.length;
           const yourPercent = o.bettors.filter((i) => i === voter).length / ts;
+          if (yourPercent > 0) isWinner = true;
           payout += beansPerBet * yourPercent;
         });
 
         const user = await User.findById(voter);
         if (user) {
+          if (isWinner) user.wins.push(poll._id);
           user.beans += Math.floor(payout);
           user.notifications.push({
-            text:
-              payout > 0
-                ? `Congratulations! You won ${payout.toLocaleString()} from the wager "${
-                    poll.title
-                  }".`
-                : `Sorry! You lost the wager "${poll.title}". Never stop betting — your big win is coming!`,
+            text: isWinner
+              ? `Congratulations! You won ${payout.toLocaleString()} from the wager "${
+                  poll.title
+                }".`
+              : `Sorry! You lost the wager "${poll.title}". Never stop betting — your big win is coming!`,
           });
           await user.save();
         }
