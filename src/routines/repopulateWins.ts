@@ -1,6 +1,7 @@
 import { User, Poll } from "../models/beans.model.js";
 import cron from "node-cron";
 
+//NOTE: This does NOT work with multi-bets currently
 async function repopulateWins() {
   try {
     const polls = await Poll.find({ contentType: "poll" });
