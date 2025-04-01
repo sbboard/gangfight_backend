@@ -20,29 +20,46 @@ async function collectBeanTaxes(): Promise<void> {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const users = await User.find({
+    const richUsers = await User.find({
       beans: { $gt: 100_000_000 },
       _id: { $ne: HOUSE_ID },
     });
 
-    const updates = users.map(async (user: any) => {
-      const recentPolls = await Poll.find({
-        creatorId: user._id,
-        creationDate: { $gte: oneWeekAgo },
-      });
+    const poorUsers = await User.find({
+      beans: { $lt: 100_000_000 },
+      _id: { $ne: HOUSE_ID },
+    });
 
-      if (recentPolls.length > 0) return null;
+    const recentPolls = await Poll.find({
+      creationDate: { $gte: oneWeekAgo },
+    });
+
+    // Collect unique bettors
+    const recentBettors = recentPolls.flatMap((poll) =>
+      poll.options.flatMap((opt) => opt.bettors)
+    );
+    const uniqueBettors = new Set(recentBettors);
+    const poorBettors = poorUsers.filter((user) =>
+      uniqueBettors.has(user._id.toString())
+    );
+
+    let taxedWealth = 0;
+    const taxTheRich = richUsers.map(async (user) => {
+      const userPolls = recentPolls.some(
+        (poll) => poll.creatorId!.toString() === user._id.toString()
+      );
+      if (userPolls) return null;
 
       const bracket = taxBrackets.find((b) => user.beans >= b.threshold) || {
         rate: 0,
       };
       const tax = Math.floor(user.beans * bracket.rate);
-      user.beans -= tax;
+      taxedWealth += tax;
 
       return User.updateOne(
         { _id: user._id },
         {
-          $set: { beans: user.beans },
+          $inc: { beans: -tax },
           $push: {
             notifications: {
               text: `You were taxed ${tax.toLocaleString()} beans (${
@@ -54,8 +71,29 @@ async function collectBeanTaxes(): Promise<void> {
       );
     });
 
-    const validUpdates = updates.filter((update) => update !== null);
-    await Promise.all(validUpdates);
+    await Promise.all(taxTheRich.filter(Boolean));
+
+    if (poorBettors.length > 0 && taxedWealth > 0) {
+      const share = Math.floor(taxedWealth / poorBettors.length);
+      const payThePoor = poorBettors.map((user) =>
+        User.updateOne(
+          { _id: user._id },
+          {
+            $inc: { beans: share },
+            $push: {
+              notifications: {
+                text: `Wealth has been redistributed. Due to your participation this past week, you have received ${share.toLocaleString()} beans from the tax collection!`,
+              },
+            },
+          }
+        )
+      );
+      await Promise.all(payThePoor);
+    }
+
+    console.log(
+      `💰 Tax collection complete! ${richUsers.length} rich users taxed and ${poorBettors.length} poor users paid.`
+    );
   } catch (error) {
     console.error("❌ Error collecting bean taxes:", error);
   }
@@ -63,6 +101,7 @@ async function collectBeanTaxes(): Promise<void> {
 
 export default function startTaxSchedule(): void {
   console.log("🕒 Bean tax scheduler initialized.");
+  //cron.schedule("*/2 * * * *", collectBeanTaxes, {
   cron.schedule("0 20 * * 0", collectBeanTaxes, {
     timezone: "America/New_York",
   });

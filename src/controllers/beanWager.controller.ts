@@ -65,28 +65,28 @@ export const createPoll = async (
     }
 
     const user = await User.findById(creatorId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    if (user.beans < seed) {
-      return res.status(400).json({ message: "Insufficient beans" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    const hasBookieLicense = user.inventory.some(
-      (item) => item.name === "bookie license"
-    );
-    if (!hasBookieLicense) {
-      return res
-        .status(400)
-        .json({ message: "User does not have a bookie license" });
-    }
+    if (user.role !== "admin") {
+      const hasBookieLicense = user.inventory.some(
+        (item) => item.name === "bookie license"
+      );
+      if (!hasBookieLicense) {
+        return res
+          .status(400)
+          .json({ message: "User does not have a bookie license" });
+      }
 
-    if (user.role === "spectator" || user.role === "bettor" || !user.role) {
-      user.role = "bookie";
-    }
+      if (user.beans < seed) {
+        return res.status(400).json({ message: "Insufficient beans" });
+      }
 
-    user.beans -= seed;
-    await user.save();
+      if (user.role === "spectator" || user.role === "bettor" || !user.role) {
+        user.role = "bookie";
+      }
+      user.beans -= seed;
+      await user.save();
+    }
 
     const poll = new Poll({
       creatorId,
@@ -373,9 +373,9 @@ export const setPollWinner = async (
           user.beans += Math.floor(payout);
           user.notifications.push({
             text: isWinner
-              ? `Congratulations! You won ${payout.toLocaleString()} from the wager "${
-                  poll.title
-                }".`
+              ? `Congratulations! You won ${Math.floor(
+                  payout
+                ).toLocaleString()} beans from the wager "${poll.title}".`
               : `Sorry! You lost the wager "${poll.title}". Never stop betting — your big win is coming!`,
           });
           await user.save();
