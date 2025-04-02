@@ -7,6 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, "..", ".env") });
 
 const HOUSE_ID = process.env.BEAN_HOUSE_ID;
+const DUPE_ID = process.env.BEAN_DUPE_ID;
 
 const taxBrackets = [
   { threshold: 1_000_000_000, rate: 0.4 }, // 1B+ -> 40%
@@ -22,12 +23,12 @@ async function collectBeanTaxes(): Promise<void> {
 
     const richUsers = await User.find({
       beans: { $gt: 100_000_000 },
-      _id: { $ne: HOUSE_ID },
+      _id: { $ne: [HOUSE_ID, DUPE_ID] },
     });
 
     const poorUsers = await User.find({
       beans: { $lt: 100_000_000 },
-      _id: { $ne: HOUSE_ID },
+      _id: { $ne: [HOUSE_ID, DUPE_ID] },
     });
 
     const recentPolls = await Poll.find({
