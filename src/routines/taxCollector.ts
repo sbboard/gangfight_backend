@@ -73,6 +73,10 @@ async function collectBeanTaxes(): Promise<void> {
 
     await Promise.all(taxTheRich.filter(Boolean));
 
+    const houseTax = Math.floor(taxedWealth * 0.2);
+    taxedWealth = Math.floor(taxedWealth - houseTax);
+    await User.updateOne({ _id: HOUSE_ID }, { $inc: { beans: houseTax } });
+
     if (poorBettors.length > 0 && taxedWealth > 0) {
       const share = Math.floor(taxedWealth / poorBettors.length);
       const payThePoor = poorBettors.map((user) =>
