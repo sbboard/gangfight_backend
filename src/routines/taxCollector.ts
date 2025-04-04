@@ -10,11 +10,15 @@ const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 const DUPE_ID = process.env.BEAN_DUPE_ID;
 
 const taxBrackets = [
-  { threshold: 1_000_000_000, rate: 0.4 }, // 1B+ -> 40%
-  { threshold: 500_000_000, rate: 0.3 }, // 500M+ -> 30%
+  { threshold: 50_000_000_000, rate: 0.8 }, // 50B+ -> 80%
+  { threshold: 10_000_000_000, rate: 0.75 }, // 10B+ -> 75%
+  { threshold: 3_000_000_000, rate: 0.7 }, // 3B+ -> 70%
+  { threshold: 1_000_000_000, rate: 0.5 }, // 1B+ -> 50%
+  { threshold: 500_000_000, rate: 0.4 }, // 500M+ -> 40%
   { threshold: 250_000_000, rate: 0.2 }, // 250M+ -> 20%
   { threshold: 100_000_000, rate: 0.1 }, // 100M+ -> 10%
 ];
+
 
 async function collectBeanTaxes(): Promise<void> {
   try {
