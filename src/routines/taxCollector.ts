@@ -19,7 +19,6 @@ const taxBrackets = [
   { threshold: 100_000_000, rate: 0.1 }, // 100M+ -> 10%
 ];
 
-
 async function collectBeanTaxes(): Promise<void> {
   try {
     const oneWeekAgo = new Date();
@@ -27,12 +26,12 @@ async function collectBeanTaxes(): Promise<void> {
 
     const richUsers = await User.find({
       beans: { $gt: 100_000_000 },
-      _id: { $ne: [HOUSE_ID, DUPE_ID] },
+      _id: { $nin: [HOUSE_ID, DUPE_ID] },
     });
 
     const poorUsers = await User.find({
       beans: { $lt: 100_000_000 },
-      _id: { $ne: [HOUSE_ID, DUPE_ID] },
+      _id: { $nin: [HOUSE_ID, DUPE_ID] },
     });
 
     const recentPolls = await Poll.find({
@@ -78,7 +77,7 @@ async function collectBeanTaxes(): Promise<void> {
 
     await Promise.all(taxTheRich.filter(Boolean));
 
-    const houseTax = Math.floor(taxedWealth * 0.2);
+    const houseTax = Math.floor(taxedWealth * 0.25);
     taxedWealth = Math.floor(taxedWealth - houseTax);
     await User.updateOne({ _id: HOUSE_ID }, { $inc: { beans: houseTax } });
 
