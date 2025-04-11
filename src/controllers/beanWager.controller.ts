@@ -196,8 +196,6 @@ export const placeBet = async (
       await placeSingleBet(poll, user, optionId, shares);
     }
 
-    if (user.role === "spectator" || !user.role) user.role = "bettor";
-
     res.json({
       message: "Bet placed successfully",
       poll: await sanitizePoll(poll, userId as string),
@@ -226,6 +224,8 @@ const placeSingleBet = async (
   poll.pot += totalCost;
 
   option.bettors.push(...Array(shares).fill(user._id));
+
+  if (user.role === "spectator" || !user.role) user.role = "bettor";
 
   await poll.save();
   await user.save();
@@ -259,6 +259,8 @@ const placeMultipleBets = async (
 
   user.beans -= totalCost;
   poll.pot += totalCost;
+
+  if (user.role === "spectator" || !user.role) user.role = "bettor";
 
   await poll.save();
   await user.save();
