@@ -4,12 +4,17 @@ export const ITEMS: Record<
 > = {
   invite: {
     price: 20_000_000,
-    generateMeta: () =>
-      Math.random()
-        .toString(36)
-        .substring(2, 7)
-        .replace(/[0-9]/g, "")
-        .toUpperCase(),
+    generateMeta: () => {
+      let code;
+      do {
+        code = Math.random()
+          .toString(36)
+          .substring(2, 6) // Generate a 4-character string
+          .replace(/[0-9]/g, "")
+          .toUpperCase();
+      } while (code.length < 4); // Ensure the code is exactly 4 characters
+      return code;
+    },
   },
   "bookie license": { price: 11_000_000, generateMeta: () => "" },
   adblock: { price: 1_000_000, generateMeta: () => "" },
