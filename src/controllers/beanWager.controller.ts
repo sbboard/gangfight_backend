@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { Bettor, Poll, PollOption, User } from "../models/beans.model.js";
+import { Bettor, Poll, User } from "../models/beans.model.js";
 import sanitizePoll from "../utils/sanitizePoll.js";
 import sanitizeUser from "../utils/sanitizeUser.js";
 import { fileURLToPath } from "url";
@@ -274,46 +274,37 @@ export const setPollWinner = async (
   try {
     const {
       pollId,
-      optionId,
       optionsArray,
     }: { pollId: string; optionId?: string; optionsArray?: string[] } =
       req.body;
 
+    if (!optionsArray) {
+      return res.status(400).json({ message: "No winner provided" });
+    }
+
     const poll = await Poll.findById(pollId);
-    if (!poll || poll.winner) {
+    if (!poll || poll.winners.length) {
       return res
         .status(poll ? 400 : 404)
         .json({ message: poll ? "Winner already set" : "Poll not found" });
     }
 
+    poll.endDate = new Date();
     poll.settleDate = new Date();
 
     let winningOptionIds: string[] = [];
 
     //Find and set the winning option to poll object
-    if (optionId) {
-      const winningOption = poll.options.find(
-        (opt) => opt._id.toString() === optionId
-      );
-      if (!winningOption) {
-        return res.status(400).json({ message: "Invalid option ID" });
-      }
+    const realOptions = poll.options.filter((opt) =>
+      optionsArray.includes(opt._id.toString())
+    );
 
-      winningOptionIds = [optionId];
-      poll.winner = optionId;
-    } else if (optionsArray) {
-      const realOptions = poll.options.filter((opt) =>
-        optionsArray.includes(opt._id.toString())
-      );
-      if (realOptions.length !== optionsArray.length) {
-        return res.status(400).json({ message: "Invalid option IDs" });
-      }
-
-      winningOptionIds = optionsArray;
-      poll.winners = optionsArray;
-    } else {
-      return res.status(400).json({ message: "No winner provided" });
+    if (realOptions.length !== optionsArray.length) {
+      return res.status(400).json({ message: "Invalid option IDs" });
     }
+
+    winningOptionIds = optionsArray;
+    poll.winners = optionsArray;
 
     await poll.save(); // Save before payouts
 

@@ -36,6 +36,12 @@ const sanitizePoll = async (
     : "Unknown";
   delete sanitizedPoll.creatorId;
 
+  //replace deprecated winner field with winners
+  if (sanitizedPoll.winner && !sanitizedPoll.winners.length) {
+    sanitizedPoll.winners = [sanitizedPoll.winner];
+    delete sanitizedPoll.winner;
+  }
+
   // Map through options and replace bettor IDs with names or user IDs for the requesting user
   sanitizedPoll.options = sanitizedPoll.options.map((option) => ({
     ...option,

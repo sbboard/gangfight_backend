@@ -17,8 +17,8 @@ interface Poll extends mongoose.Document {
   title: string;
   description: string;
   endDate: Date;
-  settleDate: Date;
-  winner: string | null;
+  settleDate?: Date; // deprecated
+  winner?: string | null; //deprecated
   winners: string[];
   creationDate: Date;
   pricePerShare: number;
@@ -78,13 +78,6 @@ const pollSchema = new Schema<Poll>({
   title: { type: String, required: true },
   description: { type: String, required: true },
   endDate: { type: Date, required: true },
-  settleDate: {
-    type: Date,
-    default: function (this: Poll) {
-      return this.endDate;
-    },
-  },
-  winner: { type: String, default: null },
   winners: { type: [String], default: [] },
   creationDate: { type: Date, default: Date.now },
   pricePerShare: { type: Number, default: 500000 },
@@ -101,6 +94,8 @@ const pollSchema = new Schema<Poll>({
     lawsBroken: { type: [String], default: [] },
   },
   betPerWager: { type: Number },
+  settleDate: { type: Date }, // deprecated
+  winner: { type: String }, // deprecated
 });
 
 // Notification Schema

@@ -93,7 +93,7 @@ export const makeWagerIllegal = async (
 
     if (!poll.legalStatus.isLegal)
       return res.status(400).json({ message: "Wager already illegal" });
-    if (poll.winner)
+    if (poll.winners.length)
       return res.status(400).json({ message: "Wager already settled" });
     if (poll.endDate.getTime() < Date.now())
       return res.status(400).json({ message: "Wager already ended" });
