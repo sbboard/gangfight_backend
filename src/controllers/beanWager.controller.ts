@@ -119,7 +119,7 @@ export const createPoll = async (
 
     res.status(201).json({
       message: "Poll created successfully",
-      newBeanAmt: user.beans,
+      user: sanitizeUser(user),
     });
   } catch (error) {
     next(error);
@@ -198,8 +198,8 @@ export const placeBet = async (
 
     res.json({
       message: "Bet placed successfully",
-      poll: await sanitizePoll(poll, userId as string),
-      newBeanAmt: user.beans,
+      poll: await sanitizePoll(poll, userId),
+      user: sanitizeUser(user),
     });
   } catch (error) {
     next(error);
