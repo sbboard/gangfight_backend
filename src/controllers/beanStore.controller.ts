@@ -217,29 +217,26 @@ export const sellItem = async (
       return res.status(400).json({ message: "User has no items to sell" });
     }
 
-    let itemValue: number = 0;
-    let itemIndex = user.inventory.findIndex(
-      (i: InventoryItem) => i._id == itemId
+    const itemIndex = user.inventory.findIndex(
+      (i: InventoryItem) =>
+        (itemId && i._id === itemId) ||
+        (itemName && i.name.toLowerCase() === itemName.toLowerCase())
     );
 
-    if (itemIndex !== -1) {
-      itemValue = user.inventory[itemIndex].specialPrice || 0;
+    if (itemIndex === -1) {
+      return res.status(400).json({ message: "Item not found in inventory" });
     }
 
-    if (itemValue === null && itemName) {
+    let itemValue: number = user.inventory[itemIndex].specialPrice || 0;
+
+    //find value of item if not a bean bag
+    if (!itemValue && itemName) {
       const item = ITEMS[itemName.toLowerCase()];
       if (!item) return res.status(400).json({ message: "Invalid item name" });
-
-      itemIndex = user.inventory.findIndex(
-        (i: InventoryItem) => i.name.toLowerCase() === itemName.toLowerCase()
-      );
       if (itemIndex !== -1) {
         itemValue = item.maintainsValue ? item.price : item.price / 2;
       }
     }
-
-    if (itemIndex === -1)
-      return res.status(400).json({ message: "Item not found in inventory" });
 
     user.inventory.splice(itemIndex, 1);
     user.beans += Math.floor(itemValue);
