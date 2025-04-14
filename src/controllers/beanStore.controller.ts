@@ -219,7 +219,7 @@ export const sellItem = async (
 
     const itemIndex = user.inventory.findIndex(
       (i: InventoryItem) =>
-        (itemId && i._id === itemId) ||
+        (itemId && i._id?.toString() === itemId) ||
         (itemName && i.name.toLowerCase() === itemName.toLowerCase())
     );
 
