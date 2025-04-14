@@ -17,7 +17,7 @@ interface Poll extends mongoose.Document {
   title: string;
   description: string;
   endDate: Date;
-  settleDate?: Date; // deprecated
+  settleDate?: Date;
   winner?: string | null; //deprecated
   winners: string[];
   creationDate: Date;
@@ -94,7 +94,12 @@ const pollSchema = new Schema<Poll>({
     lawsBroken: { type: [String], default: [] },
   },
   betPerWager: { type: Number },
-  settleDate: { type: Date }, // deprecated
+  settleDate: {
+    type: Date,
+    default: function (this: Poll) {
+      return this.endDate;
+    },
+  },
   winner: { type: String }, // deprecated
 });
 
