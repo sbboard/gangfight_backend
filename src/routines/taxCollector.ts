@@ -77,12 +77,18 @@ async function collectBeanTaxes(): Promise<void> {
 
     await Promise.all(taxTheRich.filter(Boolean));
 
-    const houseTax = Math.floor(taxedWealth * 0.25);
+    let houseTax = taxedWealth * 0.25;
     taxedWealth = Math.floor(taxedWealth - houseTax);
+
+    let share = Math.floor(taxedWealth / poorBettors.length);
+    if (share > 500_000_000) {
+      share = 500_000_000;
+      houseTax += taxedWealth - share * poorBettors.length;
+    }
+    houseTax = Math.floor(houseTax);
     await User.updateOne({ _id: HOUSE_ID }, { $inc: { beans: houseTax } });
 
-    if (poorBettors.length > 0 && taxedWealth > 0) {
-      const share = Math.floor(taxedWealth / poorBettors.length);
+    if (poorBettors.length > 0 && share > 0) {
       const payThePoor = poorBettors.map((user) =>
         User.updateOne(
           { _id: user._id },
@@ -90,7 +96,7 @@ async function collectBeanTaxes(): Promise<void> {
             $inc: { beans: share },
             $push: {
               notifications: {
-                text: `Wealth has been redistributed. Due to your participation this past week, you have received ${share.toLocaleString()} beans from the tax collection!`,
+                text: `Wealth has been redistributed. Due to your participation this past week, you have received ${share.toLocaleString()} beans from the tax collection! Just so you're aware, the house pocketed ${houseTax.toLocaleString()} beans from the tax collection. Happy betting!`,
               },
             },
           }

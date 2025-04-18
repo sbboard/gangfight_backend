@@ -46,6 +46,9 @@ router.get("/polls/:pollId", (req, res, next) =>
 router.get("/polls/", (req, res, next) =>
   handleRequest(req, res, next, "polls", wagerController.getAllPolls)
 );
+router.get("/polls/type/:type", (req, res, next) =>
+  handleRequest(req, res, next, "polls", wagerController.getPollsByType)
+);
 
 // User Routes
 router.post("/user/register", (req, res, next) =>

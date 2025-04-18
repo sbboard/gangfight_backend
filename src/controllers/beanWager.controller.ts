@@ -168,6 +168,62 @@ export const getPollById = async (
   }
 };
 
+// Get polls by type
+export const getPollsByType = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId } = req.query;
+    const { type } = req.params;
+
+    if (!type) {
+      return res.status(400).json({ message: "Poll type is required" });
+    }
+
+    const polls = await Poll.find({ contentType: "poll" }).sort("endDate");
+
+    let filteredPolls;
+    const now = new Date();
+
+    switch (type) {
+      case "open":
+        filteredPolls = polls.filter(
+          (poll) =>
+            !poll.winners.length && !poll.winner && new Date(poll.endDate) > now
+        );
+        break;
+      case "unsettled":
+        filteredPolls = polls.filter(
+          (poll) =>
+            !poll.winners?.length &&
+            !poll.winner &&
+            (!poll.legalStatus || poll.legalStatus?.isLegal) &&
+            new Date(poll.endDate) <= now
+        );
+        break;
+      case "completed":
+        filteredPolls = polls.filter(
+          (poll) =>
+            poll.winners?.length ||
+            (poll.legalStatus && !poll.legalStatus.isLegal)
+        );
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid poll type" });
+    }
+
+    const cleanedPolls = await Promise.all(
+      filteredPolls.map((poll) => sanitizePoll(poll, userId as string))
+    );
+
+    res.json(cleanedPolls);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Place a bet (vote) on an option using optionId
 export const placeBet = async (
   req: Request,
