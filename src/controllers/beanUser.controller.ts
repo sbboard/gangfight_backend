@@ -37,21 +37,25 @@ export const registerUser = async (
       "inventory.meta": inviteCode,
     });
 
-    if (!inviter) {
+    const ignoreInviter = inviteCode === "PC98" || inviteCode === "pc98";
+
+    if (!inviter && !ignoreInviter) {
       return res.status(404).json({ message: "Invalid invite code" });
     }
 
-    inviter.inventory = inviter.inventory.filter(
-      (item) => !(item.name === "invite" && item.meta === inviteCode)
-    );
+    if (!ignoreInviter && inviter) {
+      inviter.inventory = inviter.inventory.filter(
+        (item) => !(item.name === "invite" && item.meta === inviteCode)
+      );
 
-    inviter.notifications = inviter.notifications || [];
-    inviter.notifications.push({
-      text: `Your invite code was used by ${name}`,
-    });
+      inviter.notifications = inviter.notifications || [];
+      inviter.notifications.push({
+        text: `Your invite code was used by ${name}`,
+      });
 
-    await inviter.save();
-    const referrer = inviter._id;
+      await inviter.save();
+    }
+    const referrer = inviter?._id || HOUSE_ID;
 
     const hashedPassword = crypto
       .createHash("sha256")
