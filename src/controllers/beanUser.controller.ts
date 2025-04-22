@@ -43,7 +43,7 @@ export const registerUser = async (
       return res.status(404).json({ message: "Invalid invite code" });
     }
 
-    if (!ignoreInviter && inviter) {
+    if (inviter && !ignoreInviter) {
       inviter.inventory = inviter.inventory.filter(
         (item) => !(item.name === "invite" && item.meta === inviteCode)
       );
