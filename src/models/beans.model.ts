@@ -50,6 +50,7 @@ export interface Bettor extends mongoose.Document {
   notifications: Notification[];
   notificationsLastChecked?: Date;
   penalties: number;
+  lastDonation?: Date;
 }
 
 // Notification Schema Interface
@@ -137,6 +138,7 @@ const userSchema = new Schema<Bettor>({
   notifications: [notificationSchema],
   notificationsLastChecked: { type: Date },
   penalties: { type: Number, default: 0 },
+  lastDonation: { type: Date },
 });
 
 // Export models

@@ -280,8 +280,9 @@ const placeSingleBet = async (
   poll.pot += totalCost;
 
   option.bettors.push(...Array(shares).fill(user._id));
-
-  if (user.role === "spectator" || !user.role) user.role = "bettor";
+  if (poll._id.toString() === "680685bfac986a4716b17a69") {
+    user.lastDonation = new Date();
+  } else if (user.role === "spectator" || !user.role) user.role = "bettor";
 
   await poll.save();
   await user.save();

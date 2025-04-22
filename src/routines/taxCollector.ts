@@ -27,6 +27,10 @@ async function collectBeanTaxes(): Promise<void> {
     const richUsers = await User.find({
       beans: { $gt: 100_000_000 },
       _id: { $nin: [HOUSE_ID, DUPE_ID] },
+      $or: [
+        { lastDonation: { $lt: oneWeekAgo } },
+        { lastDonation: { $exists: false } },
+      ],
     });
 
     const poorUsers = await User.find({
