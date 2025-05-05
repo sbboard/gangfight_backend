@@ -9,14 +9,11 @@ dotenv.config({ path: join(__dirname, "..", ".env") });
 const HOUSE_ID = process.env.BEAN_HOUSE_ID;
 const DUPE_ID = process.env.BEAN_DUPE_ID;
 
+const MAX_REFUND = 100_000_000;
 const taxBrackets = [
-  { threshold: 50_000_000_000, rate: 0.8 }, // 50B+ -> 80%
-  { threshold: 10_000_000_000, rate: 0.75 }, // 10B+ -> 75%
-  { threshold: 3_000_000_000, rate: 0.7 }, // 3B+ -> 70%
-  { threshold: 1_000_000_000, rate: 0.5 }, // 1B+ -> 50%
-  { threshold: 500_000_000, rate: 0.4 }, // 500M+ -> 40%
-  { threshold: 250_000_000, rate: 0.2 }, // 250M+ -> 20%
-  { threshold: 100_000_000, rate: 0.1 }, // 100M+ -> 10%
+  { threshold: 500_000_000, rate: 0.5 },
+  { threshold: 250_000_000, rate: 0.25 },
+  { threshold: 100_000_000, rate: 0.1 },
 ];
 
 async function collectBeanTaxes(): Promise<void> {
@@ -85,8 +82,8 @@ async function collectBeanTaxes(): Promise<void> {
     taxedWealth = Math.floor(taxedWealth - houseTax);
 
     let share = Math.floor(taxedWealth / poorBettors.length);
-    if (share > 500_000_000) {
-      share = 500_000_000;
+    if (share > MAX_REFUND) {
+      share = MAX_REFUND;
       houseTax += taxedWealth - share * poorBettors.length;
     }
     houseTax = Math.floor(houseTax);
