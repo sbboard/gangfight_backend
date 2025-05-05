@@ -333,6 +333,71 @@ export const payOffDebt = async (
   }
 };
 
+export const claimThursdayBonus = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { userId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const today = new Date();
+    const isThursday = today.getDay() === 4; // 0 = Sunday, 1 = Monday, ..., 4 = Thursday
+
+    if (!isThursday) {
+      return res
+        .status(400)
+        .json({ message: "Thursday bonus can only be claimed on Thursdays" });
+    }
+
+    // Check if the user has already claimed the bonus this Thursday
+    const lastBonusDate = user.lastBonusClaimed
+      ? new Date(user.lastBonusClaimed)
+      : null;
+    const startOfToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    if (lastBonusDate && lastBonusDate >= startOfToday) {
+      return res.status(400).json({
+        message: "You have already claimed your Thursday bonus this week",
+      });
+    }
+
+    // Get beans from house account
+    const houseAccount = await User.findById(HOUSE_ID);
+    if (!houseAccount)
+      return res.status(500).json({ message: "House account not found" });
+
+    const bonusAmount = 5_000_000;
+
+    if (houseAccount.beans < bonusAmount) {
+      return res
+        .status(400)
+        .json({ message: "House account has insufficient beans" });
+    }
+
+    // Transfer beans from house to user
+    houseAccount.beans -= bonusAmount;
+    user.beans += bonusAmount;
+    user.lastBonusClaimed = new Date();
+
+    await Promise.all([houseAccount.save(), user.save()]);
+
+    res.json({
+      message: `Thursday bonus of ${bonusAmount.toLocaleString()} beans claimed successfully!`,
+      user: sanitizeUser(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const clearNotifications = async (
   req: Request,
   res: Response,
