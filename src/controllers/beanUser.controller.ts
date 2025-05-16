@@ -348,16 +348,15 @@ export const claimThursdayBonus = async (
     const lastBonusDate = user.lastBonusClaimed
       ? new Date(user.lastBonusClaimed)
       : null;
-    const startOfToday = new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
 
-    if (lastBonusDate && lastBonusDate >= startOfToday) {
-      return res.status(400).json({
-        message: "You have already claimed your Thursday bonus this week",
-      });
+    //make sure it's been at least 5 days since the last bonus
+    if (lastBonusDate) {
+      const daysAgo = Math.floor(
+        (today.getTime() - lastBonusDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (daysAgo < 5) {
+        return res.status(400).json({ message: "Too soon to claim!" });
+      }
     }
 
     // Get beans from house account
