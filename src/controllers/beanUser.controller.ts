@@ -345,15 +345,6 @@ export const claimThursdayBonus = async (
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const today = new Date();
-    const isThursday = today.getDay() === 4; // 0 = Sunday, 1 = Monday, ..., 4 = Thursday
-
-    if (!isThursday) {
-      return res
-        .status(400)
-        .json({ message: "Thursday bonus can only be claimed on Thursdays" });
-    }
-
-    // Check if the user has already claimed the bonus this Thursday
     const lastBonusDate = user.lastBonusClaimed
       ? new Date(user.lastBonusClaimed)
       : null;
@@ -371,8 +362,9 @@ export const claimThursdayBonus = async (
 
     // Get beans from house account
     const houseAccount = await User.findById(HOUSE_ID);
-    if (!houseAccount)
+    if (!houseAccount) {
       return res.status(500).json({ message: "House account not found" });
+    }
 
     const bonusAmount = 5_000_000;
 
