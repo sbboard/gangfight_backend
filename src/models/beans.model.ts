@@ -37,6 +37,7 @@ interface Poll extends mongoose.Document {
 export interface Bettor extends mongoose.Document {
   _id: string;
   name: string;
+  displayName?: string;
   lastIP?: string;
   debt: number;
   password?: string;
@@ -122,6 +123,12 @@ const inventoryItemSchema = new Schema<InventoryItem>({
 // User Schema
 const userSchema = new Schema<Bettor>({
   name: { type: String, required: true },
+  displayName: {
+    type: String,
+    default: function (this: Bettor) {
+      return this.name;
+    },
+  },
   lastIP: { type: String },
   debt: { type: Number, default: 0 },
   password: { type: String, required: true },

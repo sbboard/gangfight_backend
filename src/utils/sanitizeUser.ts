@@ -7,6 +7,8 @@ export const sanitizeUser = (
 
   delete sanitizedUser.password;
   delete sanitizedUser.referrer;
+  sanitizedUser.name = sanitizedUser.displayName || sanitizedUser.name;
+  delete sanitizedUser.displayName;
 
   return sanitizedUser;
 };

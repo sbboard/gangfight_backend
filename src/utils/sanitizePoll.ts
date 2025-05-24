@@ -23,11 +23,13 @@ const sanitizePoll = async (
 
   if (uncachedUserIds.length > 0) {
     const users = await User.find({ _id: { $in: uncachedUserIds } })
-      .select("name")
+      .select("name displayName")
       .lean<Bettor[]>(); // ✅ Explicitly type the query result
 
     // Populate the cache with the fetched user names
-    users.forEach((user) => (userCache[user._id.toString()] = user.name));
+    users.forEach(
+      (user) => (userCache[user._id.toString()] = user.displayName || user.name)
+    );
   }
 
   // Assign cached user names

@@ -23,7 +23,13 @@ export const registerUser = async (
   try {
     const { name, password, inviteCode } = req.body;
 
-    const existingUser = await User.findOne({ name });
+    const existingUser = await User.findOne({
+      $or: [
+        { name },
+        { displayName: name }
+      ]
+    });
+    
     if (existingUser) {
       return res.status(400).json({ message: "Username already taken" });
     }
@@ -69,7 +75,7 @@ export const registerUser = async (
       referrer,
       notifications: [
         {
-          text: "Welcome to the game! You have been gifted 10,000,000 beans to start betting.",
+          text: "Welcome to paradise! You have been gifted 10,000,000 beans to start betting.",
         },
       ],
     });

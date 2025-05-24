@@ -26,8 +26,8 @@ async function logTopTen(): Promise<void> {
 
     const newEntry = {
       date: new Date(),
-      beans: topTen.map((user: Bettor) => user.name),
-      wins: topTenWins.map((user: Bettor) => user.name),
+      beans: topTen.map((user: Bettor) => user.displayName || user.name),
+      wins: topTenWins.map((user: Bettor) => user.displayName || user.name),
     };
 
     // File path

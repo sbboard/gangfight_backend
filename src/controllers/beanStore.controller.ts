@@ -53,7 +53,7 @@ export const runLottery = async (
           u.notifications = u.notifications || [];
           u.notifications.push({
             text: `${
-              user.name
+              user.displayName || user.name
             } won the lottery! The jackpot was ${wonBeans.toLocaleString()}.`,
           });
           await u.save();
@@ -168,7 +168,10 @@ export const sendBeans = async (
 
     const recipient = await User.findOne({
       contentType: "user",
-      name: recipientName.trim(),
+      $or: [
+        { name: recipientName.trim() },
+        { displayName: recipientName.trim() },
+      ],
     }).collation({ locale: "en", strength: 2 });
 
     if (!recipient)
@@ -176,7 +179,7 @@ export const sendBeans = async (
 
     const item: Partial<InventoryItem> = {
       name: "bean bag",
-      meta: sender.name,
+      meta: sender.displayName || sender.name,
       specialPrice: amount,
       specialDescription: message,
     };
@@ -186,7 +189,9 @@ export const sendBeans = async (
 
     recipient.notifications = recipient.notifications || [];
     recipient.notifications.push({
-      text: `${sender.name} sent you ${amount.toLocaleString()} beans`,
+      text: `${
+        sender.displayName || sender.name
+      } sent you ${amount.toLocaleString()} beans`,
     });
 
     await Promise.all([sender.save(), recipient.save()]);
