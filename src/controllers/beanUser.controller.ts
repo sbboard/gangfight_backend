@@ -160,11 +160,19 @@ export const getWinners = async (
     const winners = await User.find({
       contentType: "user",
       _id: { $nin: excludedUsers },
-    }).select("name beans debt wins -_id");
+    }).select("name displayName beans debt wins -_id");
 
     winners.sort((a, b) => b.beans - b.debt - (a.beans - a.debt));
 
-    res.json(winners);
+    // Use displayName if available, otherwise use name
+    const processedWinners = winners.map(winner => ({
+      name: winner.displayName || winner.name,
+      beans: winner.beans,
+      debt: winner.debt,
+      wins: winner.wins
+    }));
+
+    res.json(processedWinners);
   } catch (error) {
     next(error);
   }
