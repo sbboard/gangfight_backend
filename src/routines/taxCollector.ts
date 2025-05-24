@@ -12,9 +12,9 @@ const DUPE_ID = process.env.BEAN_DUPE_ID;
 const MAX_REFUND = 50_000_000;
 const taxBrackets = [
   { threshold: 500_000_000, rate: 0.5 },
-  { threshold: 200_000_000, rate: 0.25 },
-  { threshold: 150_000_000, rate: 0.2 },
-  { threshold: 100_000_000, rate: 0.1 },
+  { threshold: 200_000_000, rate: 0.3 },
+  { threshold: 150_000_000, rate: 0.25 },
+  { threshold: 100_000_000, rate: 0.15 },
 ];
 
 async function collectBeanTaxes(): Promise<void> {
