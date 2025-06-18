@@ -18,6 +18,7 @@ export const ITEMS: Record<
   },
   "bookie license": { price: 11_000_000, generateMeta: () => "" },
   adblock: { price: 1_000_000, generateMeta: () => "" },
+  "joes eye": { price: 10000, generateMeta: () => "" },
   "magic beans": {
     price: 100_000_000,
     generateMeta: () => "",

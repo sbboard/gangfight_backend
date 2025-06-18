@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 import mongoose from "mongoose";
-import { User } from "../models/beans.model.js";
+import { InventoryItem, User } from "../models/beans.model.js";
 import sanitizeUser from "../utils/sanitizeUser.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -21,15 +21,12 @@ export const registerUser = async (
   next: NextFunction
 ) => {
   try {
-    const { name, password, inviteCode } = req.body;
+    const { name, password, inviteCode, eye } = req.body;
 
     const existingUser = await User.findOne({
-      $or: [
-        { name },
-        { displayName: name }
-      ]
+      $or: [{ name }, { displayName: name }],
     });
-    
+
     if (existingUser) {
       return res.status(400).json({ message: "Username already taken" });
     }
@@ -79,6 +76,13 @@ export const registerUser = async (
         },
       ],
     });
+
+    if (eye) {
+      user.inventory.push({
+        name: "joes eye",
+        meta: "",
+      } as InventoryItem);
+    }
 
     await user.save();
     res.status(201).json({
@@ -165,11 +169,11 @@ export const getWinners = async (
     winners.sort((a, b) => b.beans - b.debt - (a.beans - a.debt));
 
     // Use displayName if available, otherwise use name
-    const processedWinners = winners.map(winner => ({
+    const processedWinners = winners.map((winner) => ({
       name: winner.displayName || winner.name,
       beans: winner.beans,
       debt: winner.debt,
-      wins: winner.wins
+      wins: winner.wins,
     }));
 
     res.json(processedWinners);
