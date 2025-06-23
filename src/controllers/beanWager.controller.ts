@@ -269,7 +269,7 @@ const placeSingleBet = async (
   shares: number
 ) => {
   const option = poll.options.find((opt) => opt._id.toString() === optionId);
-  if (!option) throw new Error("Invalid option ID");
+  if (!option) return { message: "Option not found" };
 
   const totalCost = poll.pricePerShare * shares;
   if (user.beans < totalCost) {
@@ -295,11 +295,24 @@ const placeMultipleBets = async (
   shares: number
 ) => {
   if (!Array.isArray(optionsArray) || optionsArray.length === 0) {
-    throw new Error("Invalid options array");
+    return { message: "Invalid options array" };
   }
 
-  if (poll.betPerWager && optionsArray.length > poll.betPerWager) {
-    throw new Error("Invalid number of options");
+  if (!poll.betPerWager) {
+    return { message: "Bet per wager is not set for this poll" };
+  }
+
+  const existingBets = poll.options
+    .filter((opt) => opt.bettors.includes(user._id))
+    .map((opt) => opt._id.toString());
+  const newBets = optionsArray.filter((id) => !existingBets.includes(id));
+
+  if (newBets.length + existingBets.length > poll.betPerWager) {
+    return { message: "Exceeds maximum bets per wager" };
+  }
+
+  if (optionsArray.length > poll.betPerWager) {
+    return { message: "Invalid number of options" };
   }
 
   const totalCost = optionsArray.length * poll.pricePerShare * shares;
@@ -309,7 +322,7 @@ const placeMultipleBets = async (
 
   optionsArray.forEach((optionId) => {
     const option = poll.options.find((opt) => opt._id.toString() === optionId);
-    if (!option) throw new Error("Invalid option ID");
+    if (!option) return { message: "Option not found" };
 
     option.bettors.push(...Array(shares).fill(user._id));
   });
