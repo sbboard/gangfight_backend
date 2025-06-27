@@ -9,6 +9,11 @@ export interface PollOption extends mongoose.Document {
   bettors: string[];
 }
 
+export interface WriteIns extends mongoose.Document {
+  text: string;
+  bettor: string;
+}
+
 // Poll Schema Interface
 interface Poll extends mongoose.Document {
   _id: string;
@@ -31,6 +36,7 @@ interface Poll extends mongoose.Document {
     lawsBroken: string[];
   };
   betPerWager?: number;
+  writeIns?: WriteIns[];
 }
 
 // User Schema Interface
@@ -75,6 +81,11 @@ const pollOptionSchema = new Schema<PollOption>({
   bettors: [{ type: String, required: true }],
 });
 
+const WriteInsSchema = new Schema<WriteIns>({
+  text: { type: String, required: true },
+  bettor: [{ type: String, required: true }],
+});
+
 // Poll Schema
 const pollSchema = new Schema<Poll>({
   creatorId: { type: String, required: true }, // Store user ID as a string
@@ -97,6 +108,7 @@ const pollSchema = new Schema<Poll>({
     lawsBroken: { type: [String], default: [] },
   },
   betPerWager: { type: Number },
+  writeIns: [WriteInsSchema],
   settleDate: {
     type: Date,
     default: function (this: Poll) {
