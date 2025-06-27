@@ -36,6 +36,7 @@ interface Poll extends mongoose.Document {
     lawsBroken: string[];
   };
   betPerWager?: number;
+  writeInsEnabled?: boolean;
   writeIns?: WriteIns[];
 }
 
@@ -108,7 +109,6 @@ const pollSchema = new Schema<Poll>({
     lawsBroken: { type: [String], default: [] },
   },
   betPerWager: { type: Number },
-  writeIns: [WriteInsSchema],
   settleDate: {
     type: Date,
     default: function (this: Poll) {
@@ -116,6 +116,8 @@ const pollSchema = new Schema<Poll>({
     },
   },
   winner: { type: String }, // deprecated
+  writeInsEnabled: { type: Boolean, default: false },
+  writeIns: [WriteInsSchema],
 });
 
 // Notification Schema
