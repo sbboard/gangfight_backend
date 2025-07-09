@@ -21,7 +21,7 @@ export const registerUser = async (
   next: NextFunction
 ) => {
   try {
-    const { name, password, inviteCode, eye } = req.body;
+    const { name, password, inviteCode, eye, promoCode } = req.body;
 
     const existingUser = await User.findOne({
       $or: [{ name }, { displayName: name }],
@@ -65,24 +65,44 @@ export const registerUser = async (
       .update(password)
       .digest("hex");
 
-    const user = new User({
-      name,
-      password: hashedPassword,
-      wins: [],
-      referrer,
-      notifications: [
-        {
-          text: "Welcome to paradise! You have been gifted 10,000,000 beans to start betting.",
-        },
-      ],
-    });
+    let text = "Welcome to paradise!";
+    text += " You have been gifted 10,000,000 beans to start betting.";
+    let beans = 10_000_000;
+
+    const inventory = [] as InventoryItem[];
+    if (promoCode === "PIMPMYBEANS") {
+      beans += 50_000_000;
+      text = "Welcome to paradise, fellow pimp. Enjoy 50 mill on the house.";
+    } else if (
+      promoCode === "COOL" ||
+      promoCode === "FUCK" ||
+      promoCode === "BOOBS"
+    ) {
+      beans = 7_500_000;
+      text = "You come in here acting like a cool guy?";
+      text += " FUCK YOU!";
+      text += " Normally people start with 10 million beans,";
+      text += " but you're only getting 7.5 million.";
+      text += " Maybe humble yourself before you strut around here.";
+    }
 
     if (eye) {
-      user.inventory.push({
+      inventory.push({
         name: "joes eye",
         meta: "",
       } as InventoryItem);
+      text += " (You can hear a man named Joey screaming in the distance.)";
     }
+
+    const user = new User({
+      name,
+      beans,
+      password: hashedPassword,
+      wins: [],
+      referrer,
+      inventory,
+      notifications: [{ text }],
+    });
 
     await user.save();
     res.status(201).json({
