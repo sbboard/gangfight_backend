@@ -86,7 +86,7 @@ app.listen(port, () => {
 // Start routines
 // startRepopulation(); only run when necessary
 startWinCleaner(); //DAILY @7PM
-startTaxSchedule(); //SUNDAY @8PM
+//startTaxSchedule(); //SUNDAY @8PM
 startLogTopTen(); //DAILY @8:30PM
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
