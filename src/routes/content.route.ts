@@ -21,6 +21,12 @@ router.put(
   productController.update_series
 );
 
+// body: author and/or artist - a blank value clears it
+router.put(
+  `/${ROUTE_SECRET}/:id/creditsChange`,
+  productController.update_credits
+);
+
 router.put(
   `/${ROUTE_SECRET}/:id/iframeChange`,
   productController.update_iframe

@@ -26,6 +26,10 @@ const posted = `Posted!<br/>${CTA}`;
 const deleted = `Deleted!<br/>${CTA}`;
 const updated = `Updated!<br/>${CTA}`;
 
+// optional text fields: blank form inputs are stored as nothing at all
+const optionalText = (value: unknown) =>
+  typeof value === "string" && value.trim() ? value.trim() : undefined;
+
 export const product_create = async (
   req: Request,
   res: Response,
@@ -51,6 +55,8 @@ export const product_create = async (
     url,
     category,
     series,
+    author,
+    artist,
   } = req.body;
   const projName = t.replace(/[^\w]/gi, "") + s.replace(/[^\w]/gi, "");
   const isUpload = comicSource === "Upload";
@@ -79,6 +85,8 @@ export const product_create = async (
     category,
     date: new Date(),
     series,
+    author: optionalText(author),
+    artist: optionalText(artist),
     comicsArray: detArray,
     updatedDate: new Date(),
   });
@@ -112,6 +120,8 @@ export const post_update = async (
       category: "update",
       date: new Date(),
       series: oldContent[0]?.series,
+      author: oldContent[0]?.author,
+      artist: oldContent[0]?.artist,
       comicsArray: oldContent[0]?.comicsArray,
       updatedDate: new Date(),
     });
@@ -198,6 +208,28 @@ export const update_series = async (
     await Product.findByIdAndUpdate(req.params.id, {
       series: req.body.series,
     }).exec();
+    res.send(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// sets a comic's author/artist; a blank value clears it
+export const update_credits = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const $set: Record<string, string> = {};
+    const $unset: Record<string, ""> = {};
+    for (const field of ["author", "artist"] as const) {
+      if (!(field in req.body)) continue;
+      const value = optionalText(req.body[field]);
+      if (value) $set[field] = value;
+      else $unset[field] = "";
+    }
+    await Product.findByIdAndUpdate(req.params.id, { $set, $unset }).exec();
     res.send(updated);
   } catch (err) {
     next(err);
