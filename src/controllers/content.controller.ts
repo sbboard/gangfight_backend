@@ -35,6 +35,38 @@ const asFileList = (files?: UploadedFile | UploadedFile[]): UploadedFile[] =>
 const optionalText = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : undefined;
 
+const CREDIT_FIELDS = [
+  "author",
+  "artist",
+  "musician",
+  "authorUrl",
+  "artistUrl",
+  "musicianUrl",
+] as const;
+type Credits = Partial<Record<(typeof CREDIT_FIELDS)[number], string>>;
+const BAD_LINK = "Credit links must start with http:// or https://";
+
+const isWebLink = (text: string) => {
+  try {
+    return ["http:", "https:"].includes(new URL(text).protocol);
+  } catch {
+    return false;
+  }
+};
+
+// the credit fields present in a form body (blank means clear it), or null if
+// a link isn't http(s) - the site puts these straight into an href
+const readCredits = (body: Record<string, unknown>): Credits | null => {
+  const credits: Credits = {};
+  for (const field of CREDIT_FIELDS) {
+    if (!(field in body)) continue;
+    const value = optionalText(body[field]);
+    if (value && field.endsWith("Url") && !isWebLink(value)) return null;
+    credits[field] = value;
+  }
+  return credits;
+};
+
 export const product_create = async (
   req: Request,
   res: Response,
@@ -43,6 +75,12 @@ export const product_create = async (
   try {
     if (!req.files || !req.files.img) {
       res.status(400).send("No image uploaded.");
+      return;
+    }
+
+    const credits = readCredits(req.body);
+    if (!credits) {
+      res.status(400).send(BAD_LINK);
       return;
     }
 
@@ -58,8 +96,6 @@ export const product_create = async (
       url,
       category,
       series,
-      author,
-      artist,
     } = req.body;
     const projName = t.replace(/[^\w]/gi, "") + s.replace(/[^\w]/gi, "");
     const isUpload = comicSource === "Upload";
@@ -83,8 +119,7 @@ export const product_create = async (
       category,
       date: new Date(),
       series,
-      author: optionalText(author),
-      artist: optionalText(artist),
+      ...credits,
       comicsArray: detArray,
       updatedDate: new Date(),
     });
@@ -123,8 +158,9 @@ export const post_update = async (
       category: "update",
       date: new Date(),
       series: oldContent.series,
-      author: oldContent.author,
-      artist: oldContent.artist,
+      ...Object.fromEntries(
+        CREDIT_FIELDS.map((field) => [field, oldContent[field]])
+      ),
       comicsArray: oldContent.comicsArray,
       updatedDate: new Date(),
     });
@@ -215,18 +251,24 @@ export const update_series = async (
   }
 };
 
-// sets a comic's author/artist; a blank value clears it
+// sets any of a comic's credits and their links; a blank value clears it
 export const update_credits = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
+    const credits = readCredits(req.body);
+    if (!credits) {
+      res.status(400).send(BAD_LINK);
+      return;
+    }
+
     const $set: Record<string, string> = {};
     const $unset: Record<string, ""> = {};
-    for (const field of ["author", "artist"] as const) {
-      if (!(field in req.body)) continue;
-      const value = optionalText(req.body[field]);
+    for (const field of CREDIT_FIELDS) {
+      if (!(field in credits)) continue;
+      const value = credits[field];
       if (value) $set[field] = value;
       else $unset[field] = "";
     }
