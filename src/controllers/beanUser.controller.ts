@@ -1,19 +1,20 @@
 import { Request, Response, NextFunction } from "express";
-import crypto from "crypto";
 import mongoose from "mongoose";
 import { InventoryItem, User } from "../models/beans.model.js";
 import sanitizeUser from "../utils/sanitizeUser.js";
+import { getKey, hasValidKey, hashPassword } from "../utils/auth.js";
+import { toPositiveInt } from "../utils/validate.js";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import fs from "fs";
-import dotenv from "dotenv";
+import fs from "fs/promises";
+import { HOUSE_ID, DUPE_ID } from "../env.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, "..", ".env") });
 
-const HOUSE_ID = process.env.BEAN_HOUSE_ID;
-const DUPE_ID = process.env.BEAN_DUPE_ID;
-
-const getKey = (str: string): string => str.slice(-10);
+const isNameTaken = (name: string, exceptId?: string) =>
+  User.exists({
+    ...(exceptId && { _id: { $ne: exceptId } }),
+    $or: [{ name }, { displayName: name }],
+  });
 
 export const registerUser = async (
   req: Request,
@@ -21,13 +22,16 @@ export const registerUser = async (
   next: NextFunction
 ) => {
   try {
-    const { name, password, inviteCode, eye, promoCode } = req.body;
+    const { inviteCode, eye, promoCode, password } = req.body;
+    const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
 
-    const existingUser = await User.findOne({
-      $or: [{ name }, { displayName: name }],
-    });
+    if (!name || typeof password !== "string" || !password) {
+      return res
+        .status(400)
+        .json({ message: "Username and password required" });
+    }
 
-    if (existingUser) {
+    if (await isNameTaken(name)) {
       return res.status(400).json({ message: "Username already taken" });
     }
 
@@ -35,35 +39,30 @@ export const registerUser = async (
       return res.status(400).json({ message: "Invite code required" });
     }
 
-    const inviter = await User.findOne({
-      "inventory.name": "invite",
-      "inventory.meta": inviteCode,
-    });
-
-    const ignoreInviter = inviteCode === "PC98" || inviteCode === "pc98";
+    const ignoreInviter = String(inviteCode).toUpperCase() === "PC98";
+    const inviter = ignoreInviter
+      ? null
+      : await User.findOne({
+          "inventory.name": "invite",
+          "inventory.meta": inviteCode,
+        });
 
     if (!inviter && !ignoreInviter) {
       return res.status(404).json({ message: "Invalid invite code" });
     }
 
-    if (inviter && !ignoreInviter) {
+    if (inviter) {
       inviter.inventory = inviter.inventory.filter(
         (item) => !(item.name === "invite" && item.meta === inviteCode)
       );
-
-      inviter.notifications = inviter.notifications || [];
       inviter.notifications.push({
         text: `Your invite code was used by ${name}`,
       });
-
       await inviter.save();
     }
     const referrer = inviter?._id || HOUSE_ID;
 
-    const hashedPassword = crypto
-      .createHash("sha256")
-      .update(password)
-      .digest("hex");
+    const hashedPassword = hashPassword(password);
 
     let text = "Welcome to paradise!";
     text += " You have been gifted 10,000,000 beans to start betting.";
@@ -122,17 +121,13 @@ export const loginUser = async (
 ) => {
   try {
     const { name, password } = req.body;
-
-    const user = await User.findOne({ name });
-    if (!user) {
+    if (typeof password !== "string") {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
-    const hashedInputPassword = crypto
-      .createHash("sha256")
-      .update(password)
-      .digest("hex");
-    if (hashedInputPassword !== user.password) {
+    const user = await User.findOne({ name });
+    const hashedInputPassword = hashPassword(password);
+    if (!user || hashedInputPassword !== user.password) {
       return res.status(400).json({ message: "Invalid username or password" });
     }
 
@@ -160,7 +155,7 @@ export const getUser = async (
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (user.password?.slice(-10) !== key) {
+    if (!hasValidKey(user, key)) {
       return res.status(403).json({ message: "Invalid key" });
     }
 
@@ -176,15 +171,16 @@ export const getWinners = async (
   next: NextFunction
 ) => {
   try {
-    const excludedUsers = [
-      new mongoose.Types.ObjectId(HOUSE_ID),
-      new mongoose.Types.ObjectId(DUPE_ID),
-    ];
+    const excludedUsers = [HOUSE_ID, DUPE_ID]
+      .filter((id) => mongoose.isValidObjectId(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
 
     const winners = await User.find({
       contentType: "user",
       _id: { $nin: excludedUsers },
-    }).select("name displayName beans debt wins -_id");
+    })
+      .select("name displayName beans debt wins -_id")
+      .lean();
 
     winners.sort((a, b) => b.beans - b.debt - (a.beans - a.debt));
 
@@ -209,20 +205,37 @@ export const getTopTenLog = async (
 ): Promise<void> => {
   try {
     const filePath = join(__dirname, "..", "topTenLog.json");
+    const data = await fs.readFile(filePath, "utf8").catch(() => null);
 
-    if (!fs.existsSync(filePath)) {
+    if (data === null) {
       res.status(404).json({ error: "Log file not found" });
       return;
     }
 
-    const data = fs.readFileSync(filePath, "utf8");
-    const jsonData = JSON.parse(data);
-
-    res.json(jsonData);
+    res.json(JSON.parse(data));
   } catch (error) {
     next(error);
   }
 };
+
+// fields clients may not set through the generic update
+const PROTECTED_FIELDS = [
+  "password",
+  "contentType",
+  "_id",
+  "__v",
+  "role",
+  "beans",
+  "debt",
+  "wins",
+  "inventory",
+  "name",
+  "penalties",
+  "referrer",
+  "registrationDate",
+  "lastBonusClaimed",
+  "lastDonation",
+];
 
 export const updateUser = async (
   req: Request,
@@ -232,18 +245,18 @@ export const updateUser = async (
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
+    PROTECTED_FIELDS.forEach((field) => delete updateData[field]);
 
-    [
-      "password",
-      "contentType",
-      "_id",
-      "role",
-      "beans",
-      "wins",
-      "inventory",
-      "name",
-      "penalties",
-    ].forEach((field) => delete updateData[field]);
+    if ("displayName" in updateData) {
+      const displayName = String(updateData.displayName ?? "").trim();
+      if (!displayName) {
+        return res.status(400).json({ message: "Display name required" });
+      }
+      if (await isNameTaken(displayName, id)) {
+        return res.status(400).json({ message: "Username already taken" });
+      }
+      updateData.displayName = displayName;
+    }
 
     const user = await User.findByIdAndUpdate(id, updateData, {
       new: true,
@@ -267,13 +280,12 @@ export const updateNotification = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
-    const user = await User.findById(id);
-
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { notificationsLastChecked: new Date() },
+      { new: true }
+    );
     if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.notificationsLastChecked = new Date();
-    await user.save();
 
     res.json({
       message: "Last notification check updated",
@@ -290,7 +302,8 @@ export const requestDebt = async (
   next: NextFunction
 ) => {
   try {
-    const { userId, amount } = req.body;
+    const { userId } = req.body;
+    const amount = toPositiveInt(req.body.amount);
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -312,7 +325,7 @@ export const requestDebt = async (
       });
     }
 
-    if (amount < 2_000_000 || amount > 50_000_000) {
+    if (!amount || amount < 2_000_000 || amount > 50_000_000) {
       return res.status(400).json({
         message: "Requested amount must be between 2,000,000 and 50,000,000",
       });
@@ -340,7 +353,9 @@ export const payOffDebt = async (
   next: NextFunction
 ) => {
   try {
-    const { userId, amount } = req.body;
+    const { userId } = req.body;
+    const amount = toPositiveInt(req.body.amount);
+    if (!amount) return res.status(400).json({ message: "Invalid amount" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -349,13 +364,13 @@ export const payOffDebt = async (
       return res.status(400).json({ message: "User has no debt to pay off" });
     }
 
-    if (user.beans < amount) {
+    const payAmount = Math.min(amount, user.debt);
+
+    if (user.beans < payAmount) {
       return res
         .status(400)
         .json({ message: "Not enough beans to pay off the debt" });
     }
-
-    const payAmount = Math.min(amount, user.debt);
 
     user.beans -= payAmount;
     user.debt -= payAmount;
@@ -371,6 +386,9 @@ export const payOffDebt = async (
   }
 };
 
+const BONUS_AMOUNT = 5_000_000;
+const BONUS_COOLDOWN_DAYS = 5;
+
 export const claimThursdayBonus = async (
   req: Request,
   res: Response,
@@ -382,17 +400,10 @@ export const claimThursdayBonus = async (
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const today = new Date();
-    const lastBonusDate = user.lastBonusClaimed
-      ? new Date(user.lastBonusClaimed)
-      : null;
-
-    //make sure it's been at least 5 days since the last bonus
-    if (lastBonusDate) {
-      const daysAgo = Math.floor(
-        (today.getTime() - lastBonusDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      if (daysAgo < 5) {
+    if (user.lastBonusClaimed) {
+      const daysAgo =
+        (Date.now() - user.lastBonusClaimed.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysAgo < BONUS_COOLDOWN_DAYS) {
         return res.status(400).json({ message: "Too soon to claim!" });
       }
     }
@@ -403,23 +414,20 @@ export const claimThursdayBonus = async (
       return res.status(500).json({ message: "House account not found" });
     }
 
-    const bonusAmount = 5_000_000;
-
-    if (houseAccount.beans < bonusAmount) {
+    if (houseAccount.beans < BONUS_AMOUNT) {
       return res
         .status(400)
         .json({ message: "House account has insufficient beans" });
     }
 
-    // Transfer beans from house to user
-    houseAccount.beans -= bonusAmount;
-    user.beans += bonusAmount;
+    houseAccount.beans -= BONUS_AMOUNT;
+    user.beans += BONUS_AMOUNT;
     user.lastBonusClaimed = new Date();
 
     await Promise.all([houseAccount.save(), user.save()]);
 
     res.json({
-      message: `Thursday bonus of ${bonusAmount.toLocaleString()} beans claimed successfully!`,
+      message: `Thursday bonus of ${BONUS_AMOUNT.toLocaleString()} beans claimed successfully!`,
       user: sanitizeUser(user),
     });
   } catch (error) {
@@ -433,13 +441,12 @@ export const clearNotifications = async (
   next: NextFunction
 ) => {
   try {
-    const { id } = req.params;
-
-    const user = await User.findById(id);
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { notifications: [] },
+      { new: true }
+    );
     if (!user) return res.status(404).json({ message: "User not found" });
-
-    user.notifications = [];
-    await user.save();
 
     res.json({
       message: "Notifications cleared",

@@ -4,11 +4,11 @@ import { User, Poll, Bettor } from "../models/beans.model.js";
 async function cleanWins(): Promise<void> {
   try {
     const users = await User.find({ contentType: "user" });
-    const polls = await Poll.find({ contentType: "poll" });
-    const pollIds = polls.map((poll) => poll._id.toString());
+    const polls = await Poll.find({ contentType: "poll" }).select("_id");
+    const pollIds = new Set(polls.map((poll) => poll._id.toString()));
     const updates = users.map(async (user: Bettor) => {
       const wins = user.wins;
-      const noDeletedWins = wins.filter((win: any) => pollIds.includes(win));
+      const noDeletedWins = wins.filter((win) => pollIds.has(win));
       const uniqueWins = Array.from(new Set(noDeletedWins));
       if (uniqueWins.length === wins.length) return;
       user.wins = uniqueWins;

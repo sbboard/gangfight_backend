@@ -1,11 +1,7 @@
 import patreon from "patreon";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import dotenv from "dotenv";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, "..", ".env") });
+import { PATREON_ACCESS_TOKEN } from "../env.js";
 
-const accessToken = process.env.PATREON_ACCESS_TOKEN as string;
+const accessToken = PATREON_ACCESS_TOKEN as string;
 
 const patreonAPI = patreon.patreon;
 const campID = "4942396";

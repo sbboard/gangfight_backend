@@ -84,7 +84,7 @@ const pollOptionSchema = new Schema<PollOption>({
 
 const WriteInsSchema = new Schema<WriteIns>({
   text: { type: String, required: true },
-  bettor: [{ type: String, required: true }],
+  bettor: { type: String, required: true },
 });
 
 // Poll Schema

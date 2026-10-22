@@ -1,13 +1,6 @@
 import cron from "node-cron";
 import { User, Poll } from "../models/beans.model.js";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import dotenv from "dotenv";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, "..", ".env") });
-
-const HOUSE_ID = process.env.BEAN_HOUSE_ID;
-const DUPE_ID = process.env.BEAN_DUPE_ID;
+import { HOUSE_ID, DUPE_ID } from "../env.js";
 
 const MAX_REFUND = 50_000_000;
 const taxBrackets = [
@@ -49,13 +42,16 @@ async function collectBeanTaxes(): Promise<void> {
       uniqueBettors.has(user._id.toString())
     );
 
-    let taxedWealth = 0;
-    const taxTheRich = richUsers.map(async (user) => {
-      const userPolls = recentPolls.some(
-        (poll) => poll.creatorId!.toString() === user._id.toString()
-      );
-      if (userPolls) return null;
+    // anyone who ran a wager this week is exempt
+    const recentCreators = new Set(
+      recentPolls.map((poll) => poll.creatorId?.toString())
+    );
+    const taxpayers = richUsers.filter(
+      (user) => !recentCreators.has(user._id.toString())
+    );
 
+    let taxedWealth = 0;
+    const taxTheRich = taxpayers.map((user) => {
       const bracket = taxBrackets.find((b) => user.beans >= b.threshold) || {
         rate: 0,
       };
@@ -77,7 +73,7 @@ async function collectBeanTaxes(): Promise<void> {
       );
     });
 
-    await Promise.all(taxTheRich.filter(Boolean));
+    await Promise.all(taxTheRich);
 
     let houseTax = taxedWealth * 0.25;
     taxedWealth = Math.floor(taxedWealth - houseTax);
@@ -108,7 +104,7 @@ async function collectBeanTaxes(): Promise<void> {
     }
 
     console.log(
-      `💰 Tax collection complete! ${richUsers.length} rich users taxed and ${poorBettors.length} poor users paid.`
+      `💰 Tax collection complete! ${taxpayers.length} rich users taxed and ${poorBettors.length} poor users paid.`
     );
   } catch (error) {
     console.error("❌ Error collecting bean taxes:", error);

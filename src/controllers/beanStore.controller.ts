@@ -1,17 +1,16 @@
 import { Request, Response, NextFunction } from "express";
-import { User, Bettor, InventoryItem } from "../models/beans.model.js";
+import { User, InventoryItem } from "../models/beans.model.js";
 import { generateUniqueInviteCode } from "../utils/invite.js";
 import { sanitizeUser } from "../utils/sanitizeUser.js";
+import { hasValidKey } from "../utils/auth.js";
+import { toPositiveInt } from "../utils/validate.js";
 import { ITEMS } from "../constants/items.js";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
-import dotenv from "dotenv";
-const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, "..", ".env") });
-
-const HOUSE_ID = process.env.BEAN_HOUSE_ID;
+import { HOUSE_ID } from "../env.js";
 
 const LOTTO_PRICE = 10_000;
+const LOTTO_ODDS = 1 / 100000;
+const LOTTO_RESET = 10_000_000;
+const MIN_TRANSFER = 500_000;
 
 export const runLottery = async (
   req: Request,
@@ -29,39 +28,35 @@ export const runLottery = async (
         .json({ message: "Not enough beans to participate" });
     }
 
-    user.beans -= LOTTO_PRICE;
-    await user.save();
-
-    const isWinner = Math.random() < 1 / 100000;
-    let house = await User.findById(HOUSE_ID);
+    const house = await User.findById(HOUSE_ID);
     if (!house)
       return res.status(404).json({ message: "Lottery account not found" });
 
+    user.beans -= LOTTO_PRICE;
+
     let message: string;
-    let wonBeans = 0;
-
-    if (isWinner) {
-      wonBeans = house.beans;
+    if (Math.random() < LOTTO_ODDS) {
+      const wonBeans = house.beans;
       user.beans += wonBeans;
-      house.beans = 10_000_000;
+      house.beans = LOTTO_RESET;
       await Promise.all([house.save(), user.save()]);
-      message = `Congratulations! You won ${wonBeans} beans!`;
+      message = `Congratulations! You won ${wonBeans.toLocaleString()} beans!`;
 
-      const users = await User.find({ contentType: "user" });
-      await Promise.all(
-        users.map(async (u: Bettor) => {
-          u.notifications = u.notifications || [];
-          u.notifications.push({
-            text: `${
-              user.displayName || user.name
-            } won the lottery! The jackpot was ${wonBeans.toLocaleString()}.`,
-          });
-          await u.save();
-        })
+      await User.updateMany(
+        { contentType: "user" },
+        {
+          $push: {
+            notifications: {
+              text: `${
+                user.displayName || user.name
+              } won the lottery! The jackpot was ${wonBeans.toLocaleString()}.`,
+            },
+          },
+        }
       );
     } else {
       house.beans += LOTTO_PRICE;
-      await house.save();
+      await Promise.all([house.save(), user.save()]);
       message = "Better luck next time!";
     }
 
@@ -81,7 +76,7 @@ export const getJackpot = async (
   next: NextFunction
 ) => {
   try {
-    const house = await User.findById(HOUSE_ID);
+    const house = await User.findById(HOUSE_ID).select("beans").lean();
     if (!house)
       return res.status(404).json({ message: "House account not found" });
 
@@ -97,8 +92,9 @@ export const buyItem = async (
   next: NextFunction
 ) => {
   try {
-    const { userId, itemName } = req.body;
-    const item = ITEMS[itemName.toLowerCase()];
+    const { userId } = req.body;
+    const itemName = String(req.body.itemName ?? "").toLowerCase();
+    const item = ITEMS[itemName];
     if (!item) return res.status(400).json({ message: "Invalid item" });
 
     const user = await User.findById(userId);
@@ -121,7 +117,7 @@ export const buyItem = async (
     }
 
     const meta =
-      itemName.toLowerCase() === "invite"
+      itemName === "invite"
         ? await generateUniqueInviteCode()
         : item.generateMeta();
 
@@ -141,12 +137,13 @@ export const sendBeans = async (
   next: NextFunction
 ) => {
   try {
-    const { userId, userKey, recipientName, message, amount } = req.body;
+    const { userId, userKey, recipientName, message } = req.body;
+    const amount = toPositiveInt(req.body.amount);
 
-    let sender = await User.findById(userId);
+    const sender = await User.findById(userId);
     if (!sender) return res.status(404).json({ message: "User not found" });
 
-    if (sender.password?.slice(-10) !== userKey) {
+    if (!hasValidKey(sender, userKey)) {
       return res.status(403).json({ message: "Invalid key" });
     }
 
@@ -156,51 +153,47 @@ export const sendBeans = async (
         .json({ message: "You can't transfer beans while in debt" });
     }
 
-    if (sender.beans < amount) {
-      return res.status(400).json({ message: "Not enough beans" });
-    }
-
-    if (amount < 500_000) {
+    if (!amount || amount < MIN_TRANSFER) {
       return res
         .status(400)
         .json({ message: "Minimum transfer amount is 500,000 beans" });
     }
 
+    if (sender.beans < amount) {
+      return res.status(400).json({ message: "Not enough beans" });
+    }
+
+    const name = String(recipientName ?? "").trim();
     const recipient = await User.findOne({
       contentType: "user",
-      $or: [
-        { name: recipientName.trim() },
-        { displayName: recipientName.trim() },
-      ],
+      $or: [{ name }, { displayName: name }],
     }).collation({ locale: "en", strength: 2 });
 
     if (!recipient)
       return res.status(404).json({ message: "Recipient not found" });
 
-    const item: Partial<InventoryItem> = {
+    const senderName = sender.displayName || sender.name;
+    recipient.inventory.push({
       name: "bean bag",
-      meta: sender.displayName || sender.name,
+      meta: senderName,
       specialPrice: amount,
       specialDescription: message,
-    };
-
-    sender.beans -= amount;
-    recipient.inventory.push(item as InventoryItem);
-
-    recipient.notifications = recipient.notifications || [];
+    } as InventoryItem);
     recipient.notifications.push({
-      text: `${
-        sender.displayName || sender.name
-      } sent you ${amount.toLocaleString()} beans`,
+      text: `${senderName} sent you ${amount.toLocaleString()} beans`,
     });
+    await recipient.save();
 
-    await Promise.all([sender.save(), recipient.save()]);
-    const senderData = await User.findById(userId).lean();
-    if (!senderData) return res.status(404).json({ message: "User not found" });
+    // reload rather than save, in case the sender is also the recipient
+    const updatedSender = await User.findByIdAndUpdate(
+      userId,
+      { $inc: { beans: -amount } },
+      { new: true }
+    );
 
     res.json({
       message: "Beans transferred successfully",
-      user: sanitizeUser(senderData),
+      user: updatedSender && sanitizeUser(updatedSender),
     });
   } catch (error) {
     next(error);
@@ -232,15 +225,14 @@ export const sellItem = async (
       return res.status(400).json({ message: "Item not found in inventory" });
     }
 
-    let itemValue: number = user.inventory[itemIndex].specialPrice || 0;
+    const owned = user.inventory[itemIndex];
+    let itemValue = owned.specialPrice || 0;
 
     //find value of item if not a bean bag
-    if (!itemValue && itemName) {
-      const item = ITEMS[itemName.toLowerCase()];
+    if (!itemValue) {
+      const item = ITEMS[owned.name.toLowerCase()];
       if (!item) return res.status(400).json({ message: "Invalid item name" });
-      if (itemIndex !== -1) {
-        itemValue = item.maintainsValue ? item.price : item.price / 2;
-      }
+      itemValue = item.maintainsValue ? item.price : item.price / 2;
     }
 
     user.inventory.splice(itemIndex, 1);

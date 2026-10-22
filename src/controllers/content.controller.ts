@@ -4,15 +4,23 @@ import path from "path";
 import Product from "../models/content.model.js";
 import { UploadedFile } from "express-fileupload";
 
-const searchIdPromise = (id: string) => Product.find({ _id: id }).exec();
+const thumbDir = "/var/www/html/assets/contentImages/";
+const comicsDir = "/var/www/html/assets/comics/";
+const CTA = `<a href='/gf_gambee'>let's go home</a>`;
+const posted = `Posted!<br/>${CTA}`;
+const deleted = `Deleted!<br/>${CTA}`;
+const updated = `Updated!<br/>${CTA}`;
+
+// strips any directory parts a client might sneak into an upload's name
+const safeName = (fileName: string) => path.basename(fileName);
 
 const generateUniqueName = (basePath: string, fileName: string): string => {
   const ext = path.extname(fileName);
   const baseName = path.basename(fileName, ext);
-  let uniqueName = fileName;
+  let uniqueName = safeName(fileName);
   let counter = 1;
 
-  while (fs.existsSync(basePath + uniqueName)) {
+  while (fs.existsSync(path.join(basePath, uniqueName))) {
     uniqueName = `${baseName}_${counter}${ext}`;
     counter++;
   }
@@ -20,11 +28,8 @@ const generateUniqueName = (basePath: string, fileName: string): string => {
   return uniqueName;
 };
 
-const thumbDir = "/var/www/html/assets/contentImages/";
-const CTA = `<a href='/gf_gambee'>let's go home</a>`;
-const posted = `Posted!<br/>${CTA}`;
-const deleted = `Deleted!<br/>${CTA}`;
-const updated = `Updated!<br/>${CTA}`;
+const asFileList = (files?: UploadedFile | UploadedFile[]): UploadedFile[] =>
+  !files ? [] : Array.isArray(files) ? files : [files];
 
 // optional text fields: blank form inputs are stored as nothing at all
 const optionalText = (value: unknown) =>
@@ -34,65 +39,61 @@ export const product_create = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
-  if (!req.files || !req.files.img) {
-    res.status(400).send("No image uploaded.");
-    return;
-  }
-
-  const imgFile = req.files.img as UploadedFile;
-  const name = generateUniqueName(thumbDir, imgFile.name);
-
-  imgFile.mv(path.join(thumbDir, name), (err) => {
-    if (err) return res.status(500).send("Thumbnail upload failed.");
-  });
-
-  const detArray: string[] = [];
-  const {
-    title: t,
-    subtitle: s,
-    comicSource,
-    url,
-    category,
-    series,
-    author,
-    artist,
-  } = req.body;
-  const projName = t.replace(/[^\w]/gi, "") + s.replace(/[^\w]/gi, "");
-  const isUpload = comicSource === "Upload";
-
-  if (isUpload) {
-    const dir = `/var/www/html/assets/comics/${projName}`;
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-
-    if (Array.isArray(req.files.pages)) {
-      req.files.pages.forEach((file: UploadedFile) => {
-        file.mv(`${dir}/${file.name}`);
-        detArray.push(file.name);
-      });
-    } else {
-      const file = req.files.pages as UploadedFile;
-      file.mv(`${dir}/${file.name}`);
-      detArray.push(file.name);
+): Promise<void> => {
+  try {
+    if (!req.files || !req.files.img) {
+      res.status(400).send("No image uploaded.");
+      return;
     }
+
+    const imgFile = req.files.img as UploadedFile;
+    const name = generateUniqueName(thumbDir, imgFile.name);
+    await imgFile.mv(path.join(thumbDir, name));
+
+    const detArray: string[] = [];
+    const {
+      title: t = "",
+      subtitle: s = "",
+      comicSource,
+      url,
+      category,
+      series,
+      author,
+      artist,
+    } = req.body;
+    const projName = t.replace(/[^\w]/gi, "") + s.replace(/[^\w]/gi, "");
+    const isUpload = comicSource === "Upload";
+
+    if (isUpload) {
+      const dir = path.join(comicsDir, projName);
+      fs.mkdirSync(dir, { recursive: true });
+
+      for (const file of asFileList(req.files.pages)) {
+        const pageName = safeName(file.name);
+        await file.mv(path.join(dir, pageName));
+        detArray.push(pageName);
+      }
+    }
+
+    const product = new Product({
+      title: t,
+      subtitle: s,
+      img: name,
+      url: isUpload ? projName : url,
+      category,
+      date: new Date(),
+      series,
+      author: optionalText(author),
+      artist: optionalText(artist),
+      comicsArray: detArray,
+      updatedDate: new Date(),
+    });
+
+    await product.save();
+    res.send("Product created successfully");
+  } catch (err) {
+    next(err);
   }
-
-  const product = new Product({
-    title: t,
-    subtitle: s,
-    img: name,
-    url: isUpload ? projName : url,
-    category,
-    date: new Date(),
-    series,
-    author: optionalText(author),
-    artist: optionalText(artist),
-    comicsArray: detArray,
-    updatedDate: new Date(),
-  });
-
-  await product.save();
-  res.send("Product created successfully");
 };
 
 export const post_update = async (
@@ -101,32 +102,34 @@ export const post_update = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    let name = "";
-    const oldContent = await searchIdPromise(req.body.contentUpdating);
+    const oldContent = await Product.findById(req.body.contentUpdating).exec();
+    if (!oldContent) {
+      res.status(404).send("Content to update not found.");
+      return;
+    }
 
+    let name = oldContent.img;
     if (req.files && req.files.img) {
       const imgFile = req.files.img as UploadedFile;
       name = generateUniqueName(thumbDir, imgFile.name);
-      imgFile.mv(thumbDir + name);
-    } else {
-      name = oldContent[0]?.img;
+      await imgFile.mv(path.join(thumbDir, name));
     }
 
     const product = new Product({
-      title: oldContent[0]?.title,
+      title: oldContent.title,
       subtitle: req.body.subtitle,
       img: name,
-      url: oldContent[0]?.url,
+      url: oldContent.url,
       category: "update",
       date: new Date(),
-      series: oldContent[0]?.series,
-      author: oldContent[0]?.author,
-      artist: oldContent[0]?.artist,
-      comicsArray: oldContent[0]?.comicsArray,
+      series: oldContent.series,
+      author: oldContent.author,
+      artist: oldContent.artist,
+      comicsArray: oldContent.comicsArray,
       updatedDate: new Date(),
     });
 
-    await Product.findByIdAndUpdate(req.body.contentUpdating, {
+    await Product.findByIdAndUpdate(oldContent._id, {
       $set: { updatedDate: new Date(), img: name },
     }).exec();
 
@@ -143,12 +146,10 @@ export const whole_list = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const personList = await Product.find({}).sort("-date").exec();
-    res.send(
-      isNaN(Number(req.params.num))
-        ? personList
-        : personList.slice(0, Number(req.params.num))
-    );
+    const limit = Number(req.params.num);
+    const query = Product.find({}).sort("-date");
+    if (Number.isInteger(limit) && limit > 0) query.limit(limit);
+    res.send(await query.exec());
   } catch (err) {
     next(err);
   }

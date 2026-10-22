@@ -1,33 +1,30 @@
 import cron from "node-cron";
-import { User, Bettor } from "../models/beans.model.js";
+import { User } from "../models/beans.model.js";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import dotenv from "dotenv";
+import { HOUSE_ID, DUPE_ID } from "../env.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: join(__dirname, "..", ".env") });
-
-const HOUSE_ID = process.env.BEAN_HOUSE_ID;
-const DUPE_ID = process.env.BEAN_DUPE_ID;
 
 async function logTopTen(): Promise<void> {
   try {
     const users = await User.find({
       contentType: "user",
       _id: { $nin: [HOUSE_ID, DUPE_ID] },
-    });
+    })
+      .select("name displayName beans wins")
+      .lean();
 
-    const topTen = users
-      .sort((a: Bettor, b: Bettor) => b.beans - a.beans)
-      .slice(0, 10);
-    const topTenWins = users
-      .sort((a: Bettor, b: Bettor) => b.wins.length - a.wins.length)
-      .slice(0, 10);
+    const topTenNames = (score: (user: (typeof users)[number]) => number) =>
+      [...users]
+        .sort((a, b) => score(b) - score(a))
+        .slice(0, 10)
+        .map((user) => user.displayName || user.name);
 
     const newEntry = {
       date: new Date(),
-      beans: topTen.map((user: Bettor) => user.displayName || user.name),
-      wins: topTenWins.map((user: Bettor) => user.displayName || user.name),
+      beans: topTenNames((user) => user.beans),
+      wins: topTenNames((user) => user.wins.length),
     };
 
     // File path
