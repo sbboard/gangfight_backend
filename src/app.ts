@@ -1,4 +1,4 @@
-import { MONDO_SECRET, PORT } from "./env.js";
+import { MONGO_URI, PORT } from "./env.js";
 import express, { Request, Response, NextFunction } from "express";
 import fileUpload from "express-fileupload";
 import mongoose from "mongoose";
@@ -9,8 +9,7 @@ import startWinCleaner from "./routines/winCheck.js";
 import startLogTopTen from "./routines/logTopTen.js";
 import startRepopulation from "./routines/repopulateWins.js";
 
-const mongoDB = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
-mongoose.connect(mongoDB);
+mongoose.connect(MONGO_URI);
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "MongoDB connection error:"));
 db.once("open", () => console.log("Connected to MongoDB successfully"));

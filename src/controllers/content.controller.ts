@@ -3,9 +3,8 @@ import fs from "fs";
 import path from "path";
 import Product from "../models/content.model.js";
 import { UploadedFile } from "express-fileupload";
-
-const thumbDir = "/var/www/html/assets/contentImages/";
-const comicsDir = "/var/www/html/assets/comics/";
+import { saveImage } from "../utils/webp.js";
+import { comicsDir, thumbDir } from "../constants/paths.js";
 const CTA = `<a href='/gf_gambee'>let's go home</a>`;
 const posted = `Posted!<br/>${CTA}`;
 const deleted = `Deleted!<br/>${CTA}`;
@@ -14,7 +13,10 @@ const updated = `Updated!<br/>${CTA}`;
 // strips any directory parts a client might sneak into an upload's name
 const safeName = (fileName: string) => path.basename(fileName);
 
-const generateUniqueName = (basePath: string, fileName: string): string => {
+export const generateUniqueName = (
+  basePath: string,
+  fileName: string
+): string => {
   const ext = path.extname(fileName);
   const baseName = path.basename(fileName, ext);
   let uniqueName = safeName(fileName);
@@ -85,8 +87,9 @@ export const product_create = async (
     }
 
     const imgFile = req.files.img as UploadedFile;
-    const name = generateUniqueName(thumbDir, imgFile.name);
-    await imgFile.mv(path.join(thumbDir, name));
+    const name = await saveImage(imgFile.data, thumbDir, imgFile.name, (n) =>
+      generateUniqueName(thumbDir, n)
+    );
 
     const detArray: string[] = [];
     const {
@@ -104,10 +107,9 @@ export const product_create = async (
       const dir = path.join(comicsDir, projName);
       fs.mkdirSync(dir, { recursive: true });
 
+      // PNG pages are stored as WebP (see utils/webp.ts)
       for (const file of asFileList(req.files.pages)) {
-        const pageName = safeName(file.name);
-        await file.mv(path.join(dir, pageName));
-        detArray.push(pageName);
+        detArray.push(await saveImage(file.data, dir, safeName(file.name)));
       }
     }
 
@@ -146,8 +148,9 @@ export const post_update = async (
     let name = oldContent.img;
     if (req.files && req.files.img) {
       const imgFile = req.files.img as UploadedFile;
-      name = generateUniqueName(thumbDir, imgFile.name);
-      await imgFile.mv(path.join(thumbDir, name));
+      name = await saveImage(imgFile.data, thumbDir, imgFile.name, (n) =>
+        generateUniqueName(thumbDir, n)
+      );
     }
 
     const product = new Product({

@@ -14,3 +14,5 @@ export const {
   BEAN_HOUSE_ID: HOUSE_ID,
   BEAN_DUPE_ID: DUPE_ID,
 } = process.env;
+
+export const MONGO_URI = `mongodb+srv://buffum:${MONDO_SECRET}@gangu-t2mbg.mongodb.net/test`;
