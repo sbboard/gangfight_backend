@@ -8,6 +8,11 @@
 // The PNGs are left where they are, so nothing is lost and links to them
 // keep working; delete them by hand once the site looks right. Safe to run
 // again: documents already pointing at WebP files are skipped.
+//
+// Every PNG is encoded either way (the dry run needs the real sizes), at
+// about a second per large page on a fast machine, so a whole archive can
+// take minutes. A dry run can be stopped at any time; let --apply finish, as
+// a stopped run leaves written WebPs the next run won't reuse.
 import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
@@ -37,14 +42,20 @@ async function convert(dir: string, name: string): Promise<string | null> {
     console.warn(`missing: ${file}`);
     missing++;
   } else {
+    const started = Date.now();
     const png = await fs.promises.readFile(file);
     const webp = await pngToWebp(png);
+    const kb = (bytes: number) => `${Math.round(bytes / 1024)}KB`;
+    const took = `${((Date.now() - started) / 1000).toFixed(1)}s`;
     if (webp) {
       result = generateUniqueName(dir, webpName(name));
       before += png.length;
       after += webp.length;
       converted++;
       if (apply) await fs.promises.writeFile(path.join(dir, result), webp);
+      console.log(`${file}: ${kb(png.length)} -> ${kb(webp.length)} (${took})`);
+    } else {
+      console.log(`${file}: kept as PNG, WebP not smaller (${took})`);
     }
   }
   done.set(file, result);
@@ -52,11 +63,14 @@ async function convert(dir: string, name: string): Promise<string | null> {
 }
 
 async function main() {
+  console.log(apply ? "Converting (--apply)..." : "Dry run...");
   await mongoose.connect(MONGO_URI);
   const docs = await Product.find({}).exec();
+  console.log(`Checking ${docs.length} documents`);
   let updatedDocs = 0;
 
-  for (const doc of docs) {
+  for (const [i, doc] of docs.entries()) {
+    console.log(`[${i + 1}/${docs.length}] ${doc.title} ${doc.subtitle ?? ""}`);
     const $set: Record<string, unknown> = {};
 
     if (doc.img && isPng(doc.img)) {
