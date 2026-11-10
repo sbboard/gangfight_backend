@@ -6,7 +6,6 @@ import { UploadedFile } from "express-fileupload";
 import { saveImage } from "../utils/webp.js";
 import { comicsDir, thumbDir } from "../constants/paths.js";
 const CTA = `<a href='/gf_gambee'>let's go home</a>`;
-const posted = `Posted!<br/>${CTA}`;
 const deleted = `Deleted!<br/>${CTA}`;
 const updated = `Updated!<br/>${CTA}`;
 
@@ -179,52 +178,6 @@ export const product_create = async (
   }
 };
 
-export const post_update = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const oldContent = await Product.findById(req.body.contentUpdating).exec();
-    if (!oldContent) {
-      res.status(404).send("Content to update not found.");
-      return;
-    }
-
-    let name = oldContent.img;
-    if (req.files && req.files.img) {
-      const imgFile = req.files.img as UploadedFile;
-      name = await saveImage(imgFile.data, thumbDir, imgFile.name, (n) =>
-        generateUniqueName(thumbDir, n)
-      );
-    }
-
-    const product = new Product({
-      title: oldContent.title,
-      subtitle: req.body.subtitle,
-      img: name,
-      url: oldContent.url,
-      category: "update",
-      date: new Date(),
-      series: oldContent.series,
-      ...Object.fromEntries(
-        CREDIT_FIELDS.map((field) => [field, oldContent[field]])
-      ),
-      comicsArray: oldContent.comicsArray,
-      updatedDate: new Date(),
-    });
-
-    await Product.findByIdAndUpdate(oldContent._id, {
-      $set: { updatedDate: new Date(), img: name },
-    }).exec();
-
-    await product.save();
-    res.send(posted);
-  } catch (err) {
-    next(err);
-  }
-};
-
 export const whole_list = async (
   req: Request,
   res: Response,
@@ -263,23 +216,6 @@ export const comic_info = async (
   try {
     const personList = await Product.find({ _id: req.params.id }).exec();
     res.send(personList);
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const update_iframe = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      { iframe: req.body.iframe },
-      { new: true }
-    ).exec();
-    res.send(updatedProduct);
   } catch (err) {
     next(err);
   }

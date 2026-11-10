@@ -7,9 +7,6 @@ const router = express.Router();
 
 router.post(`/${ROUTE_SECRET}/create`, productController.product_create);
 
-// Update posts a new item under the update category
-router.post(`/${ROUTE_SECRET}/update`, productController.post_update);
-
 router.put(
   `/${ROUTE_SECRET}/:id/seriesChange`,
   productController.update_series
@@ -24,11 +21,6 @@ router.put(`/${ROUTE_SECRET}/seriesOrder`, productController.series_order);
 router.put(
   `/${ROUTE_SECRET}/:id/creditsChange`,
   productController.update_credits
-);
-
-router.put(
-  `/${ROUTE_SECRET}/:id/iframeChange`,
-  productController.update_iframe
 );
 
 router.delete(`/${ROUTE_SECRET}/:id/delete`, productController.product_delete);

@@ -18,7 +18,6 @@ export interface GangContent extends mongoose.Document {
   seriesOrder?: number;
   assetFolder?: string;
   comicsArray?: any[];
-  iframe?: boolean;
   // credits: who wrote it, drew it and made its audio, each with an optional
   // link to their page (any of them can be left out)
   author?: string;
@@ -41,7 +40,6 @@ const GangContentSchema = new Schema<GangContent>({
   seriesOrder: { type: Number },
   assetFolder: { type: String },
   comicsArray: { type: [Schema.Types.Mixed] },
-  iframe: { type: Boolean, default: false },
   author: { type: String, trim: true },
   artist: { type: String, trim: true },
   musician: { type: String, trim: true },
