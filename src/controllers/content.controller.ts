@@ -296,6 +296,37 @@ export const series_order = async (
   }
 };
 
+// Renames a comic: its title and subtitle (a blank subtitle is none, as on
+// upload). Only those - an uploaded comic's url (its pages' folder) was
+// made from the name it had then and stays as it is, or its pages would go
+// missing; nor do its dates change.
+export const update_title = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const title =
+      typeof req.body.title === "string" ? req.body.title.trim() : "";
+    const subtitle =
+      typeof req.body.subtitle === "string" ? req.body.subtitle.trim() : "";
+    if (!title) {
+      res.status(400).send("A comic needs a title.");
+      return;
+    }
+    const comic = await Product.findByIdAndUpdate(req.params.id, {
+      $set: { title, subtitle },
+    }).exec();
+    if (!comic) {
+      res.status(404).send("Comic not found.");
+      return;
+    }
+    res.send(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // sets any of a comic's credits and their links; a blank value clears it
 export const update_credits = async (
   req: Request,

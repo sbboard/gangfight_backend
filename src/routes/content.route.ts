@@ -16,6 +16,9 @@ router.put(
 // first] } - sets the series' reading order, leaving dates alone
 router.put(`/${ROUTE_SECRET}/seriesOrder`, productController.series_order);
 
+// body: { title, subtitle } - renames a comic (its url and dates stay)
+router.put(`/${ROUTE_SECRET}/:id/titleChange`, productController.update_title);
+
 // body: any of author, artist, musician and their authorUrl/artistUrl/musicianUrl
 // links - a blank value clears it
 router.put(
