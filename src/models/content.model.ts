@@ -12,6 +12,10 @@ export interface GangContent extends mongoose.Document {
   date: Date;
   updatedDate: Date;
   series?: string;
+  // its place in its series' reading order (0 first) - which isn't always
+  // the order they came out in. Only comics in a series have one; set from
+  // gambee's Series Order page, and never touches the dates.
+  seriesOrder?: number;
   assetFolder?: string;
   comicsArray?: any[];
   iframe?: boolean;
@@ -34,6 +38,7 @@ const GangContentSchema = new Schema<GangContent>({
   date: { type: Date, required: true },
   updatedDate: { type: Date, required: true },
   series: { type: String },
+  seriesOrder: { type: Number },
   assetFolder: { type: String },
   comicsArray: { type: [Schema.Types.Mixed] },
   iframe: { type: Boolean, default: false },

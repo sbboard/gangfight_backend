@@ -18,7 +18,9 @@
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "copy-files": "node -e \"const fs=require('fs');fs.copyFileSync(fs.existsSync('src/.env')?'src/.env':'.env','dist/.env');fs.copyFileSync('package.json','dist/package.json')\"",
     "gcp-build": "tsc -p .",
-    "start": "node dist/app.js"
+    "start": "node dist/app.js",
+    "deploy": "node scripts/deploy.mjs",
+    "buildanddeploy": "npm run clean && npm run gcp-build && npm run deploy -- --apply"
   },
   "repository": {
     "type": "git",
@@ -32,6 +34,7 @@
   "homepage": "https://github.com/sbboard/gangfight_backend#readme",
   "devDependencies": {
     "@types/express-fileupload": "^1.5.1",
-    "@types/node-cron": "^3.0.11"
+    "@types/node-cron": "^3.0.11",
+    "ssh2-sftp-client": "^12.1.1"
   }
 }

@@ -1,3 +1,5 @@
 node_modules
 .env
 dist
+# SFTP credentials for scripts/deploy.mjs
+.env.deploy

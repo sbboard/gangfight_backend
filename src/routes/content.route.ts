@@ -15,6 +15,10 @@ router.put(
   productController.update_series
 );
 
+// body: { series, order: [every comic id in the series, first to read
+// first] } - sets the series' reading order, leaving dates alone
+router.put(`/${ROUTE_SECRET}/seriesOrder`, productController.series_order);
+
 // body: any of author, artist, musician and their authorUrl/artistUrl/musicianUrl
 // links - a blank value clears it
 router.put(

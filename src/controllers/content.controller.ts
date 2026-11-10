@@ -69,6 +69,48 @@ const readCredits = (body: Record<string, unknown>): Credits | null => {
   return credits;
 };
 
+// ---- series reading order -------------------------------------------------
+//
+// A comic in a series has a seriesOrder: its place in the order the series
+// is meant to be read (0 first), which isn't always the order they came
+// out in. Only comics in a series have one - "noseries" (or none) means no
+// reading order. It's only ever set here and by series_order; neither
+// touches a comic's date or updatedDate.
+
+const NO_SERIES = "noseries";
+const inASeries = (series: unknown): series is string =>
+  typeof series === "string" && series.trim() !== "" && series !== NO_SERIES;
+
+// The next place at the end of a series' reading order. Comics from before
+// reading orders existed have none, so the series is first numbered 0, 1,
+// 2... in its current order - any it already has first, then the rest in
+// release order - so a comic added "at the end" really is after all of them.
+const endOfSeries = async (series: string): Promise<number> => {
+  const comics = await Product.find({ category: "comic", series })
+    .select("seriesOrder date")
+    .exec();
+  const ordered = [...comics].sort((a, b) => {
+    const ao = a.seriesOrder ?? Infinity;
+    const bo = b.seriesOrder ?? Infinity;
+    if (ao !== bo) return ao - bo;
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
+  const renumber = ordered.flatMap((comic, seriesOrder) =>
+    comic.seriesOrder === seriesOrder
+      ? []
+      : [
+          {
+            updateOne: {
+              filter: { _id: comic._id },
+              update: { $set: { seriesOrder } },
+            },
+          },
+        ]
+  );
+  if (renumber.length) await Product.bulkWrite(renumber);
+  return ordered.length;
+};
+
 export const product_create = async (
   req: Request,
   res: Response,
@@ -121,6 +163,10 @@ export const product_create = async (
       category,
       date: new Date(),
       series,
+      // a new comic in a series goes at the end of its reading order
+      ...(category === "comic" && inASeries(series)
+        ? { seriesOrder: await endOfSeries(series) }
+        : {}),
       ...credits,
       comicsArray: detArray,
       updatedDate: new Date(),
@@ -239,15 +285,75 @@ export const update_iframe = async (
   }
 };
 
+// Moves a comic to another series - onto the end of that series' reading
+// order - or out of any (which clears its place in one). Its dates stay.
 export const update_series = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    await Product.findByIdAndUpdate(req.params.id, {
-      series: req.body.series,
-    }).exec();
+    const { series } = req.body;
+    const comic = await Product.findById(req.params.id).exec();
+    if (!comic) {
+      res.status(404).send("Comic not found.");
+      return;
+    }
+    if (comic.series === series) {
+      res.send(updated);
+      return;
+    }
+    const update = inASeries(series)
+      ? { $set: { series, seriesOrder: await endOfSeries(series) } }
+      : { $set: { series }, $unset: { seriesOrder: "" } };
+    await Product.findByIdAndUpdate(comic._id, update).exec();
+    res.send(updated);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Sets a series' whole reading order at once, from gambee's Series Order
+// page. body: { series, order: [comic ids, first to read to last] }. Every
+// comic in the series has to be listed, once, and nothing else - so a stale
+// page (a comic added or moved since it loaded) is turned away rather than
+// leaving gaps. Only seriesOrder changes - never a date.
+export const series_order = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { series, order } = req.body ?? {};
+    if (!inASeries(series)) {
+      res.status(400).send("Only a series has a reading order.");
+      return;
+    }
+    if (
+      !Array.isArray(order) ||
+      !order.every((id) => typeof id === "string") ||
+      new Set(order).size !== order.length
+    ) {
+      res.status(400).send("order must be a list of comic ids, each once.");
+      return;
+    }
+    const inSeries = await Product.find({ category: "comic", series })
+      .select("_id")
+      .exec();
+    const ids = new Set(inSeries.map((c) => String(c._id)));
+    if (order.length !== ids.size || !order.every((id) => ids.has(id))) {
+      res
+        .status(409)
+        .send(
+          `That isn't every comic in ${series} - reload the page and try again.`
+        );
+      return;
+    }
+    await Product.bulkWrite(
+      order.map((id: string, seriesOrder: number) => ({
+        updateOne: { filter: { _id: id }, update: { $set: { seriesOrder } } },
+      }))
+    );
     res.send(updated);
   } catch (err) {
     next(err);
